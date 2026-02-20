@@ -2804,24 +2804,50 @@ async function submitToHubSpot(data) {
   if (data.summary) fields.push({ name: 'message', value: data.summary });
   if (data.reportURL) fields.push({ name: 'workforce_planning', value: data.reportURL });
 
-  // Use a hidden form + iframe to submit (avoids CORS issues)
+  const payload = {
+    fields: fields,
+    context: {
+      pageUri: window.location.href,
+      pageName: 'Workforce Cost Planner'
+    }
+  };
+
+  // Try fetch API first (works on HTTPS origins like GitHub Pages)
+  try {
+    const resp = await fetch(
+      'https://api.hsforms.com/submissions/v3/integration/submit/' + PORTAL_ID + '/' + FORM_GUID,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      }
+    );
+    if (!resp.ok) {
+      const errBody = await resp.text();
+      console.error('HubSpot error ' + resp.status + ':', errBody);
+      return false;
+    }
+    console.log('HubSpot submission succeeded via fetch');
+    return true;
+  } catch (fetchErr) {
+    console.warn('Fetch failed, trying iframe fallback:', fetchErr);
+  }
+
+  // Fallback: iframe form POST (for file:// or CORS-blocked origins)
   return new Promise((resolve) => {
     try {
-      // Create hidden iframe
       const iframeName = 'hs_submit_' + Date.now();
       const iframe = document.createElement('iframe');
       iframe.name = iframeName;
       iframe.style.display = 'none';
       document.body.appendChild(iframe);
 
-      // Create hidden form
       const form = document.createElement('form');
       form.method = 'POST';
       form.action = 'https://forms.hubspot.com/uploads/form/v2/' + PORTAL_ID + '/' + FORM_GUID;
       form.target = iframeName;
       form.style.display = 'none';
 
-      // Add fields
       fields.forEach(f => {
         const input = document.createElement('input');
         input.type = 'hidden';
@@ -2832,15 +2858,15 @@ async function submitToHubSpot(data) {
 
       document.body.appendChild(form);
       form.submit();
+      console.log('HubSpot submission sent via iframe fallback');
 
-      // Clean up after a short delay
       setTimeout(() => {
         form.remove();
         iframe.remove();
         resolve(true);
       }, 2000);
     } catch (e) {
-      console.error('HubSpot submission failed:', e);
+      console.error('HubSpot iframe fallback failed:', e);
       resolve(false);
     }
   });
