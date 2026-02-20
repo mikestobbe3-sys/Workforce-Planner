@@ -1557,17 +1557,21 @@
 
     <!-- Success state -->
     <div id="emailSuccessState" style="display:none;">
-      <div class="email-modal-header" style="background:var(--green);border-color:var(--green);">
+      <div class="email-modal-header" style="background:#2d7a4f;border-color:#2d7a4f;">
         <div class="email-modal-icon">✅</div>
-        <h3>Your Report Is on Its Way!</h3>
-        <p>Check your inbox in the next few minutes. If you don't see it, check your spam folder.</p>
+        <h3>Your Report Is Ready!</h3>
+        <p>We've also sent a copy to your inbox. If you don't see it, check your spam folder.</p>
       </div>
       <div class="email-modal-body" style="text-align:center;padding:28px;">
-        <p style="font-size:0.88em;color:#555;line-height:1.6;margin-bottom:20px;">We've sent a personalized workforce cost analysis to <strong id="confirmEmail"></strong>. The report includes a detailed comparison, industry-specific insights, and next steps.</p>
-        <p style="font-size:0.82em;color:#888;margin-bottom:20px;">Want to discuss your results with a workforce planning specialist?</p>
-        <a href="mailto:contact@mainlinetalentgroup.com" class="email-modal-submit" style="display:inline-flex;text-decoration:none;width:auto;padding:12px 28px;">Book a Conversation</a>
+        <p style="font-size:0.88em;color:#555;line-height:1.6;margin-bottom:20px;">Your personalized workforce cost analysis has been sent to <strong id="confirmEmail"></strong>.</p>
+        <a id="reportLink" href="#" target="_blank" class="email-modal-submit" style="display:inline-flex;text-decoration:none;width:auto;padding:12px 28px;background:#2C5E79;">📋 View Your Report Now</a>
+        <p style="font-size:0.78em;color:#999;margin-top:14px;line-height:1.5;">You can also print or save your report as a PDF from the report page.</p>
+        <div style="margin-top:14px;padding-top:14px;border-top:1px solid #eee;">
+          <p style="font-size:0.82em;color:#888;margin-bottom:12px;">Want to discuss your results with a workforce planning specialist?</p>
+          <a href="mailto:contact@mainlinetalentgroup.com" style="font-size:0.85em;color:#2C5E79;font-weight:700;text-decoration:none;">contact@mainlinetalentgroup.com</a>
+        </div>
         <div style="margin-top:16px;">
-          <a href="#" onclick="closeEmailModal();return false;" style="font-size:0.82em;color:#999;text-decoration:none;">Close and continue</a>
+          <a href="#" onclick="closeEmailModal();return false;" style="font-size:0.82em;color:#999;text-decoration:none;">Close</a>
         </div>
       </div>
     </div>
@@ -2701,39 +2705,77 @@ function validateEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
-function buildCalculatorSummary() {
+function buildReportData() {
+  // Build a compact data object with all role calculations
+  const rolesData = _computed.map(({r, c}) => ({
+    name: r.name || 'Untitled',
+    salary: r.salary,
+    rate: r.rate,
+    months: r.months,
+    mode: r.mode,
+    state: getStateLabel($('d-state')),
+    dTotal: Math.round(c.dTotal),
+    dAnnual: Math.round(c.dAnnual),
+    salaryPro: Math.round(c.salaryPro),
+    taxTotal: Math.round(c.taxTotal),
+    healthAmt: Math.round(c.healthAmt),
+    k401: Math.round(c.k401),
+    ptoAmt: Math.round(c.ptoAmt),
+    itAmt: Math.round(c.itAmt),
+    recruitAmt: Math.round(c.recruitAmt),
+    rampCost: Math.round(c.rampCost),
+    bonusCost: Math.round(c.bonusCost || 0),
+    dEhr: c.dEhr,
+    cTotal: Math.round(c.cTotal),
+    cEhr: c.cEhr,
+    cHeading: r.mode==='hourly'?'Contractor \u2014 Hourly':r.mode==='weekly'?'Contractor \u2014 Guaranteed Hours':'Contractor \u2014 Monthly Retainer',
+    delta: Math.round(c.delta),
+    xMo: c.xMo,
+    rampLabel: c.rampLabel
+  }));
+  return {
+    industry: $('projectIndustry').value || '',
+    project: $('roleDesc').value.trim() || '',
+    roles: rolesData,
+    generatedAt: new Date().toISOString()
+  };
+}
+
+function buildReportURL(data) {
+  const json = JSON.stringify(data);
+  const encoded = encodeURIComponent(btoa(json));
+  // Use relative path so it works on any host
+  const base = window.location.href.replace(/\/[^\/]*$/, '/');
+  return base + 'report.html?d=' + encoded;
+}
+
+function buildCalculatorSummary(data, reportURL) {
   const lines = [];
-  lines.push('Industry: ' + ($('projectIndustry').value || 'Not specified'));
-  lines.push('Project: ' + ($('roleDesc').value.trim() || 'Not specified'));
+  lines.push('Industry: ' + (data.industry || 'Not specified'));
+  lines.push('Project: ' + (data.project || 'Not specified'));
+  lines.push('Report Link: ' + reportURL);
   lines.push('---');
-  _computed.forEach(({r, c}) => {
-    lines.push('Role: ' + (r.name || 'Untitled'));
+  data.roles.forEach(r => {
+    lines.push('Role: ' + r.name);
     lines.push('  Salary: $' + r.salary.toLocaleString());
-    lines.push('  State: ' + (r.stateLabel || ''));
+    lines.push('  State: ' + r.state);
     lines.push('  Months: ' + r.months);
     lines.push('  Bill Rate: $' + r.rate + '/hr');
-    lines.push('  Structure: ' + (r.mode === 'hourly' ? 'Hourly' : r.mode === 'weekly' ? 'Guaranteed Hours' : 'Monthly Retainer'));
-    lines.push('  Direct Hire Cost: $' + Math.round(c.dTotal).toLocaleString());
-    lines.push('  Contractor Cost: $' + Math.round(c.cTotal).toLocaleString());
-    const delta = c.dTotal - c.cTotal;
+    lines.push('  Direct Hire Cost: $' + r.dTotal.toLocaleString());
+    lines.push('  Contractor Cost: $' + r.cTotal.toLocaleString());
+    const delta = r.dTotal - r.cTotal;
     lines.push('  Savings: ' + (delta > 0 ? '$' + Math.round(delta).toLocaleString() + ' (contractor wins)' : '$' + Math.round(Math.abs(delta)).toLocaleString() + ' (direct hire wins)'));
-    lines.push('  Break-Even: ~month ' + c.xMo);
     lines.push('');
   });
-
-  const totalD = _computed.reduce((s, x) => s + x.c.dTotal, 0);
-  const totalC = _computed.reduce((s, x) => s + x.c.cTotal, 0);
-  lines.push('TOTALS');
-  lines.push('  Total Direct Hire: $' + Math.round(totalD).toLocaleString());
-  lines.push('  Total Contractor: $' + Math.round(totalC).toLocaleString());
-  lines.push('  Total Savings: $' + Math.round(Math.abs(totalD - totalC)).toLocaleString());
-
+  const totalD = data.roles.reduce((s, r) => s + r.dTotal, 0);
+  const totalC = data.roles.reduce((s, r) => s + r.cTotal, 0);
+  lines.push('TOTALS: Direct $' + totalD.toLocaleString() + ' | Contractor $' + totalC.toLocaleString() + ' | Savings $' + Math.round(Math.abs(totalD - totalC)).toLocaleString());
   return lines.join('\n');
 }
 
 async function submitToHubSpot(data) {
   const PORTAL_ID = '47653730';
-  const FORM_GUID = 'REPLACE_WITH_YOUR_FORM_GUID';
+  const FORM_GUID = 'a9ea9419-e2c0-49c7-a217-c236c350750c';
 
   const fields = [
     { name: 'email', value: data.email },
@@ -2742,8 +2784,8 @@ async function submitToHubSpot(data) {
   if (data.lastName) fields.push({ name: 'lastname', value: data.lastName });
   if (data.company) fields.push({ name: 'company', value: data.company });
   if (data.industry) fields.push({ name: 'industry', value: data.industry });
-  // Calculator summary goes into the message/notes field
   if (data.summary) fields.push({ name: 'message', value: data.summary });
+  if (data.reportURL) fields.push({ name: 'workforce_planning_url', value: data.reportURL });
 
   const payload = {
     fields: fields,
@@ -2768,7 +2810,7 @@ async function submitToHubSpot(data) {
 
   try {
     const resp = await fetch(
-      'https://api.hsforms.com/submissions/v3/integration/submit/' + PORTAL_ID + '/' + FORM_GUID,
+      'https://api.hsforms.com/submissions/v3/integration/submit/' + PORTAL_ID + '/' + FORM_GUID + '?region=na1',
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -2806,23 +2848,30 @@ async function submitEmailCapture() {
   const btnText = $('emailSubmitText');
   const spinner = $('emailSpinner');
   btn.disabled = true;
-  btnText.textContent = 'Sending…';
+  btnText.textContent = 'Preparing your report…';
   spinner.style.display = 'block';
 
-  // Build summary and submit to HubSpot
+  // Build report data and URL
+  const reportData = buildReportData();
+  const reportURL = buildReportURL(reportData);
+  const summary = buildCalculatorSummary(reportData, reportURL);
+
+  // Submit to HubSpot
   const hubData = {
     email: email,
     firstName: $('captureFirst').value.trim(),
     lastName: $('captureLast').value.trim(),
     company: $('captureCompany').value.trim(),
     industry: $('projectIndustry').value,
-    summary: buildCalculatorSummary()
+    summary: summary,
+    reportURL: reportURL
   };
 
   await submitToHubSpot(hubData);
 
-  // Show success state
+  // Show success state with report link
   $('confirmEmail').textContent = email;
+  $('reportLink').href = reportURL;
   $('emailFormState').style.display = 'none';
   $('emailSuccessState').style.display = '';
 
