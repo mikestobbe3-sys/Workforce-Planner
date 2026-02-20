@@ -1380,6 +1380,9 @@
             <label id="d-hoursLabel">Hours Per Week</label>
             <input type="range" id="d-hours" min="1" max="40" value="20" step="1" oninput="onDetailChange()">
             <span class="field-val" id="d-hoursVal">40 hrs/wk</span>
+            <div id="hoursWarning" style="display:none;font-size:0.78em;color:#b45014;font-weight:600;margin-top:5px;line-height:1.4;">
+              ⚠️ Hours per week is below the guaranteed minimum. You'll be paying for <span id="unusedHoursAmt"></span> unused hours each week.
+            </div>
           </div>
           <div class="field" id="d-minField" style="display:none;">
             <label id="d-minHoursLabel">Guaranteed Hours/Week</label>
@@ -1956,6 +1959,21 @@ function refreshDetailLabels() {
   if (r) {
     const c = calcRole({...r,salary,rate,months,hrs,minHrs,stateVal:$('d-state').value,mode:r.mode});
     $('d-discountVal').textContent = c.discountPerHr>0?'−$'+c.discountPerHr+'/hr discount':'';
+  }
+
+  // Unused hours warning (only for guaranteed hours mode)
+  const warn = $('hoursWarning');
+  if (warn) {
+    const mode = r ? r.mode : 'hourly';
+    if (mode === 'weekly' && hrs < minHrs) {
+      $('unusedHoursAmt').textContent = (minHrs - hrs);
+      warn.style.display = 'block';
+    } else if (mode === 'monthly' && (hrs * 4.33) < minHrs) {
+      $('unusedHoursAmt').textContent = Math.round(minHrs - (hrs * 4.33)) + ' per month';
+      warn.style.display = 'block';
+    } else {
+      warn.style.display = 'none';
+    }
   }
 }
 
