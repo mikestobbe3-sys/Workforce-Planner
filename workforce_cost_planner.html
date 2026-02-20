@@ -2792,7 +2792,7 @@ function buildCalculatorSummary(data, reportURL) {
 
 async function submitToHubSpot(data) {
   const PORTAL_ID = '47653730';
-  const FORM_GUID = 'a9ea9419-e2c0-49c7-a217-c236c350750c';
+  const FORM_GUID = 'a3bf14c4-ff39-4391-8d12-97919a0822da';
 
   const fields = [
     { name: 'email', value: data.email },
@@ -2802,7 +2802,7 @@ async function submitToHubSpot(data) {
   if (data.company) fields.push({ name: 'company', value: data.company });
   if (data.industry) fields.push({ name: 'industry', value: data.industry });
   if (data.summary) fields.push({ name: 'message', value: data.summary });
-  if (data.reportURL) fields.push({ name: 'website', value: data.reportURL });
+  if (data.reportURL) fields.push({ name: 'workforce_planning', value: data.reportURL });
 
   // Use a hidden form + iframe to submit (avoids CORS issues)
   return new Promise((resolve) => {
