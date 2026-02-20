@@ -2744,10 +2744,8 @@ function buildReportData() {
 
 function buildReportURL(data) {
   const json = JSON.stringify(data);
-  // Encode UTF-8 characters properly before base64
   const encoded = encodeURIComponent(btoa(unescape(encodeURIComponent(json))));
-  const base = window.location.href.replace(/\/[^\/]*$/, '/');
-  return base + 'report.html?d=' + encoded;
+  return 'https://mikestobbe3-sys.github.io/Workforce-Planner/report.html?d=' + encoded;
 }
 
 function buildCalculatorSummary(data, reportURL) {
