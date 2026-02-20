@@ -1506,11 +1506,11 @@
   <div style="background:var(--white);border-radius:var(--r);box-shadow:var(--shadow);padding:20px 24px;display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap;border-left:4px solid var(--blue);">
     <div>
       <div style="font-weight:700;font-size:0.95em;color:var(--dark);margin-bottom:4px;">📋 Get the Full Report</div>
-      <div style="font-size:0.83em;color:#666;line-height:1.5;">Receive a branded cost analysis report with detailed pros, cons, risks, and next steps tailored to your industry and scenario. We'll send it straight to your inbox.</div>
+      <div style="font-size:0.83em;color:#666;line-height:1.5;">Generate a branded PDF report with detailed pros, cons, risks, and next steps tailored to your industry and scenario. Enter your email and your report opens instantly.</div>
     </div>
     <button class="pdf-btn" id="pdfBtn" onclick="generateReport()" style="flex-shrink:0;">
-      <span class="btn-icon">📧</span>
-      <span id="pdfBtnText">Email Me the Report</span>
+      <span class="btn-icon">📄</span>
+      <span id="pdfBtnText">Generate PDF Report</span>
     </button>
   </div>
 
@@ -1520,10 +1520,7 @@
 <div class="email-modal-overlay" id="emailModal">
   <div class="email-modal">
     <button class="email-modal-close" onclick="closeEmailModal()">&times;</button>
-
-    <!-- Form state -->
-    <div id="emailFormState">
-      <div class="email-modal-header">
+    <div class="email-modal-header">
         <div class="email-modal-icon">📧</div>
         <h3>Where Should We Send Your Report?</h3>
         <p>Enter your work email and we'll deliver a personalized cost analysis report to your inbox within minutes.</p>
@@ -1552,31 +1549,9 @@
           <label><input type="checkbox" id="captureConsent" checked> I agree to receive this report and occasional workforce planning insights from Main Line Talent Group. You can unsubscribe at any time.</label>
         </div>
         <button class="email-modal-submit" id="emailSubmitBtn" onclick="submitEmailCapture()">
-          <span id="emailSubmitText">Send Me the Report</span>
+          <span id="emailSubmitText">Generate My Report</span>
           <div class="pdf-spinner" id="emailSpinner" style="display:none;"></div>
         </button>
-      </div>
-    </div>
-
-    <!-- Success state -->
-    <div id="emailSuccessState" style="display:none;">
-      <div class="email-modal-header" style="background:#2d7a4f;border-color:#2d7a4f;">
-        <div class="email-modal-icon">✅</div>
-        <h3>Your Report Is Ready!</h3>
-        <p>We've also sent a copy to your inbox. If you don't see it, check your spam folder.</p>
-      </div>
-      <div class="email-modal-body" style="text-align:center;padding:28px;">
-        <p style="font-size:0.88em;color:#555;line-height:1.6;margin-bottom:20px;">Your personalized workforce cost analysis has been sent to <strong id="confirmEmail"></strong>.</p>
-        <a id="reportLink" href="#" target="_blank" class="email-modal-submit" style="display:inline-flex;text-decoration:none;width:auto;padding:12px 28px;background:#2C5E79;">📋 View Your Report Now</a>
-        <p style="font-size:0.78em;color:#999;margin-top:14px;line-height:1.5;">You can also print or save your report as a PDF from the report page.</p>
-        <div id="hubspotNote" style="display:none;font-size:0.78em;color:#b45014;margin-top:10px;line-height:1.5;">Note: We had trouble sending the email copy. Your report is still available via the link above.</div>
-        <div style="margin-top:14px;padding-top:14px;border-top:1px solid #eee;">
-          <p style="font-size:0.82em;color:#888;margin-bottom:12px;">Want to discuss your results with a workforce planning specialist?</p>
-          <a href="mailto:support@mainlinetalent.com" style="font-size:0.85em;color:#2C5E79;font-weight:700;text-decoration:none;">support@mainlinetalent.com</a>
-        </div>
-        <div style="margin-top:16px;">
-          <a href="#" onclick="closeEmailModal();return false;" style="font-size:0.82em;color:#999;text-decoration:none;">Close</a>
-        </div>
       </div>
     </div>
 
@@ -2707,9 +2682,6 @@ function generateReport() {
     $('projectIndustry').closest('.section-card').scrollIntoView({behavior:'smooth',block:'center'});
     return;
   }
-  // Reset modal to form state
-  $('emailFormState').style.display = '';
-  $('emailSuccessState').style.display = 'none';
   $('emailModal').classList.add('open');
   setTimeout(() => $('captureEmail').focus(), 200);
 }
@@ -2724,70 +2696,169 @@ function validateEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
-function buildReportData() {
-  // Build a compact data object with all role calculations
-  const rolesData = _computed.map(({r, c}) => ({
-    name: r.name || 'Untitled',
-    salary: r.salary,
-    rate: r.rate,
-    months: r.months,
-    mode: r.mode,
-    state: getStateLabel($('d-state')),
-    dTotal: Math.round(c.dTotal),
-    dAnnual: Math.round(c.dAnnual),
-    salaryPro: Math.round(c.salaryPro),
-    taxTotal: Math.round(c.taxTotal),
-    healthAmt: Math.round(c.healthAmt),
-    k401: Math.round(c.k401),
-    ptoAmt: Math.round(c.ptoAmt),
-    itAmt: Math.round(c.itAmt),
-    recruitAmt: Math.round(c.recruitAmt),
-    rampCost: Math.round(c.rampCost),
-    bonusCost: Math.round(c.bonusCost || 0),
-    dEhr: c.dEhr,
-    cTotal: Math.round(c.cTotal),
-    cEhr: c.cEhr,
-    cHeading: r.mode==='hourly'?'Contractor \u2014 Hourly':r.mode==='weekly'?'Contractor \u2014 Guaranteed Hours':'Contractor \u2014 Monthly Retainer',
-    delta: Math.round(c.delta),
-    xMo: c.xMo,
-    rampLabel: c.rampLabel
-  }));
-  return {
-    industry: $('projectIndustry').value || '',
-    project: $('roleDesc').value.trim() || '',
-    roles: rolesData,
-    generatedAt: new Date().toISOString()
-  };
-}
-
-function buildReportURL(data) {
-  const json = JSON.stringify(data);
-  const encoded = encodeURIComponent(btoa(unescape(encodeURIComponent(json))));
-  return 'https://mikestobbe3-sys.github.io/Workforce-Planner/workforce_cost_planner.html?report=' + encoded;
-}
-
-function buildCalculatorSummary(data, reportURL) {
+function buildCalculatorSummary() {
   const lines = [];
-  lines.push('Industry: ' + (data.industry || 'Not specified'));
-  lines.push('Project: ' + (data.project || 'Not specified'));
-  lines.push('Report Link: ' + reportURL);
+  lines.push('Industry: ' + ($('projectIndustry').value || 'Not specified'));
+  lines.push('Project: ' + ($('roleDesc').value.trim() || 'Not specified'));
   lines.push('---');
-  data.roles.forEach(r => {
-    lines.push('Role: ' + r.name);
+  _computed.forEach(({r, c}) => {
+    lines.push('Role: ' + (r.name || 'Untitled'));
     lines.push('  Salary: $' + r.salary.toLocaleString());
-    lines.push('  State: ' + r.state);
     lines.push('  Months: ' + r.months);
     lines.push('  Bill Rate: $' + r.rate + '/hr');
-    lines.push('  Direct Hire Cost: $' + r.dTotal.toLocaleString());
-    lines.push('  Contractor Cost: $' + r.cTotal.toLocaleString());
-    const delta = r.dTotal - r.cTotal;
+    lines.push('  Direct Hire Cost: $' + Math.round(c.dTotal).toLocaleString());
+    lines.push('  Contractor Cost: $' + Math.round(c.cTotal).toLocaleString());
+    const delta = c.dTotal - c.cTotal;
     lines.push('  Savings: ' + (delta > 0 ? '$' + Math.round(delta).toLocaleString() + ' (contractor wins)' : '$' + Math.round(Math.abs(delta)).toLocaleString() + ' (direct hire wins)'));
     lines.push('');
   });
-  const totalD = data.roles.reduce((s, r) => s + r.dTotal, 0);
-  const totalC = data.roles.reduce((s, r) => s + r.cTotal, 0);
-  lines.push('TOTALS: Direct $' + totalD.toLocaleString() + ' | Contractor $' + totalC.toLocaleString() + ' | Savings $' + Math.round(Math.abs(totalD - totalC)).toLocaleString());
+  const totalD = _computed.reduce((s, x) => s + x.c.dTotal, 0);
+  const totalC = _computed.reduce((s, x) => s + x.c.cTotal, 0);
+  lines.push('TOTALS: Direct $' + Math.round(totalD).toLocaleString() + ' | Contractor $' + Math.round(totalC).toLocaleString() + ' | Savings $' + Math.round(Math.abs(totalD - totalC)).toLocaleString());
   return lines.join('\n');
+}
+
+// ── LOCAL NARRATIVE GENERATOR ──
+function fetchNarrative(s) {
+  const billingDesc = s.mode==='hourly' ? 'Hourly (no commitment)' : s.mode==='weekly' ? 'Guaranteed Hours ('+s.minHrs+' hrs/wk guaranteed, best rate)' : 'Monthly Retainer ('+s.minHrs+' hrs/mo)';
+  const ind = s.industry || '';
+  const delta = s.delta;
+  const contractorWins = delta > 0;
+  const savingsAmt = '$'+Math.round(Math.abs(delta)).toLocaleString();
+  const pctSavings = Math.round(Math.abs(delta) / Math.max(s.dTotal, s.cTotal) * 100);
+  const shortTerm = s.months <= 12;
+  const longTerm = s.months > 24;
+  const highSalary = s.salary >= 150000;
+  const state = s.stateLabel || 'the selected state';
+
+  const industryInsights = {
+    'Manufacturing': { directPro:'In manufacturing, direct hires develop deep institutional knowledge of production systems, shop floor workflows, and safety protocols that contractors may take longer to absorb.', contractorPro:'Manufacturing firms often face cyclical demand, so contracting lets you scale technical talent for implementations or plant expansions without permanent headcount during downturns.', risk:'Manufacturing environments may require specific certifications, OSHA training, or union considerations that affect onboarding timelines for either hiring model.', research:'Investigate whether this role requires specialized certifications, and check whether your current partner network can provide implementation support as an alternative.' },
+    'Healthcare': { directPro:'Healthcare organizations benefit from permanent hires who can navigate HIPAA compliance, EHR integrations, and the regulatory landscape that affects every technology decision.', contractorPro:'Healthcare IT projects often have strict go-live deadlines tied to regulatory requirements, and contractors bring specialized implementation experience without long-term cost obligations.', risk:'Healthcare roles may require background checks, credentialing, and HIPAA training that add 2-4 weeks to onboarding regardless of employment model.', research:'Confirm whether this role requires access to protected health information (PHI), which would require a Business Associate Agreement and may limit contractor eligibility.' },
+    'Financial Services': { directPro:'Financial services firms benefit from permanent hires who can build deep expertise in regulatory compliance, risk frameworks, and the specific trading or banking systems the organization relies on.', contractorPro:'Financial services technology projects often face hard regulatory deadlines, and contractors bring specialized expertise for time-bound implementations without adding permanent overhead.', risk:'Financial services roles typically require extensive background checks, licensing verification, and compliance training.', research:'Verify whether this role touches SOX-controlled systems or requires any FINRA/SEC registrations that would affect contractor eligibility or timeline.' },
+    'Technology': { directPro:'Technology companies benefit from permanent hires who contribute to long-term product vision, accumulate codebase knowledge, and participate in the company culture that drives innovation.', contractorPro:'Tech firms frequently use contractors for defined sprints, platform migrations, or to bridge skill gaps while the market for specialized talent remains competitive.', risk:'In a competitive tech labor market, top-tier contractor rates may rise quickly. Intellectual property considerations also require clear contractual boundaries for any work produced.', research:'Evaluate whether IP assignment clauses in your contractor agreements adequately protect proprietary technology, and assess the local talent pool for this skill set.' },
+  };
+  const ins = industryInsights[ind] || null;
+
+  let directProsCons = '';
+  if (contractorWins) {
+    directProsCons = 'Direct hiring provides long-term stability and full organizational integration'+(highSalary ? ', which is particularly valuable at the $'+s.salary.toLocaleString()+' salary level where institutional knowledge compounds over time' : '')+'. ';
+    directProsCons += 'However, the upfront investment is significant: recruiting costs of $'+Math.round(s.recruitAmt).toLocaleString()+' and a ramp period ('+s.rampLabel+') add $'+Math.round(s.recruitAmt+s.rampCost).toLocaleString()+' before the hire reaches full productivity. ';
+    directProsCons += (ins ? ins.directPro+' ' : '');
+    directProsCons += shortTerm ? 'For a '+s.months+'-month need, these one-time costs may not amortize before the role concludes.' : 'Over '+s.months+' months, these one-time costs begin to amortize but the contractor option still shows a '+savingsAmt+' advantage.';
+  } else {
+    directProsCons = 'Direct hiring is the more cost-effective option for this engagement, saving '+savingsAmt+' compared to contracting. ';
+    directProsCons += 'At '+s.months+' months, the one-time costs of recruiting ($'+Math.round(s.recruitAmt).toLocaleString()+') and ramp time fully amortize against the ongoing savings in loaded cost. ';
+    directProsCons += (ins ? ins.directPro+' ' : '');
+    directProsCons += 'The trade-off is less flexibility. A permanent hire commits the organization to ongoing salary, benefits, and employment obligations beyond the project timeline.';
+  }
+
+  let contractorProsCons = '';
+  if (contractorWins) {
+    contractorProsCons = 'Contracting via the '+billingDesc+' structure delivers '+savingsAmt+' in savings (approximately '+pctSavings+'%) over the '+s.months+'-month engagement. ';
+    contractorProsCons += 'The primary financial advantage comes from eliminating employer-side taxes, benefits, recruiting fees, and ramp-up productivity loss, which total $'+Math.round(s.taxTotal+s.healthAmt+s.k401+s.ptoAmt+s.itAmt+s.recruitAmt+s.rampCost).toLocaleString()+' on the direct-hire side. ';
+    contractorProsCons += (ins ? ins.contractorPro+' ' : '');
+    contractorProsCons += shortTerm ? 'For engagements under 12 months, contracting almost always delivers stronger ROI because one-time hiring costs cannot fully amortize.' : 'The break-even point where direct hiring becomes competitive is approximately month '+s.xMo+'.';
+  } else {
+    contractorProsCons = 'Contracting provides flexibility and eliminates employer obligations, but at a $'+s.rate+'/hr bill rate over '+s.months+' months, the total cost exceeds direct hiring by '+savingsAmt+'. ';
+    contractorProsCons += (ins ? ins.contractorPro+' ' : '');
+    contractorProsCons += 'Contracting may still be the right choice if speed-to-start, specialized expertise, or workforce flexibility are higher priorities than pure cost optimization.';
+  }
+
+  let risks = 'In '+state+', employer tax obligations include state unemployment insurance at the rates reflected in this analysis, which add to the loaded cost of a direct hire. ';
+  risks += (ins ? ins.risk+' ' : 'Regardless of the hiring model, role transitions carry institutional knowledge risk that should be mitigated with thorough documentation and knowledge transfer plans. ');
+  risks += contractorWins
+    ? 'If the project extends significantly beyond '+s.months+' months, the cost advantage of contracting narrows and may reverse.'
+    : 'If the role scope shrinks or the engagement ends earlier than planned, the direct-hire one-time costs ($'+Math.round(s.recruitAmt+s.rampCost).toLocaleString()+') may not fully amortize, tipping the economics toward contracting.';
+  risks += longTerm ? ' For a '+s.months+'-month engagement, contractor retention is a real risk. Consider whether contract renewal terms or a conversion clause should be negotiated upfront.' : '';
+
+  let research = (ins ? ins.research+' ' : 'Research the local talent market for this role to understand whether contractor supply is sufficient to meet your timeline and quality requirements. ');
+  research += 'Compare the bill rate to current market data for this role to ensure the engagement is competitively priced. ';
+  research += highSalary ? 'At this salary level, explore whether the role could be structured as a contract-to-hire arrangement.' : 'Discuss with your finance team whether the '+s.months+'-month engagement fits within the current budget cycle.';
+
+  return 'DIRECT HIRE \u2014 PROS AND CONS\n'+directProsCons+'\n\nCONTRACTOR \u2014 PROS AND CONS\n'+contractorProsCons+'\n\nPOTENTIAL RISKS TO CONSIDER\n'+risks+'\n\nAREAS TO RESEARCH FURTHER\n'+research;
+}
+
+// ── PDF BUILDER (opens HTML report in new tab) ──
+function buildPDF(s, narrative) {
+  const roleLabel = s.role!=='Not specified' ? s.role : 'General hiring evaluation';
+  const industryLabel = s.industry ? '  \u00b7  Industry: '+s.industry : '';
+  const dateStr = new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'});
+  const billingLabel = s.mode==='hourly'?'Hourly':s.mode==='weekly'?'Guaranteed Hours':'Monthly Retainer';
+  const stateClean = (s.stateLabel||'').replace(/ \(.*\)/,'');
+  const contractorWins = s.delta > 0;
+  const deltaMsg = contractorWins
+    ? 'Contractor saves $'+Math.round(Math.abs(s.delta)).toLocaleString()+' over this engagement'
+    : 'Direct hire is $'+Math.round(Math.abs(s.delta)).toLocaleString()+' lower cost over this engagement';
+
+  const sectionDefs = [
+    {key:'DIRECT HIRE \u2014 PROS AND CONS', color:'#8c8c8c'},
+    {key:'CONTRACTOR \u2014 PROS AND CONS', color:'#2C5E79'},
+    {key:'POTENTIAL RISKS TO CONSIDER', color:'#b45014'},
+    {key:'AREAS TO RESEARCH FURTHER', color:'#2C5E79'},
+  ];
+  let sectionHTML = '';
+  sectionDefs.forEach((sec,idx) => {
+    const nextKey = idx < sectionDefs.length-1 ? sectionDefs[idx+1].key : null;
+    const start = narrative.indexOf(sec.key);
+    if (start === -1) return;
+    const end = nextKey ? narrative.indexOf(nextKey) : narrative.length;
+    const body = narrative.slice(start+sec.key.length, end!==-1?end:undefined).trim();
+    sectionHTML += '<div style="background:'+sec.color+';color:#fff;padding:6px 14px;border-radius:4px;font-size:10px;font-weight:700;letter-spacing:0.08em;margin-top:18px;">'+sec.key+'</div><p style="font-size:10.5px;color:#333;line-height:1.7;margin:8px 0 0 0;">'+body+'</p>';
+  });
+
+  const bonusRow = s.bonusCost > 0
+    ? '<tr style="color:#999;font-size:9.5px;"><td style="padding:3px 0 3px 14px;">Bonuses</td><td style="text-align:right;padding:3px 0;">$'+Math.round(s.bonusCost).toLocaleString()+'</td></tr>'
+    : '';
+
+  const html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>MLTG Cost Analysis \u2014 '+roleLabel+'</title>'
+    + '<style>@page{size:letter;margin:0.5in 0.6in;}@media print{body{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}.no-print{display:none!important;}}*{box-sizing:border-box;margin:0;padding:0;}body{font-family:"Segoe UI",Arial,Helvetica,sans-serif;color:#231F20;font-size:11px;line-height:1.5;background:#fff;}.page{max-width:7.5in;margin:0 auto;}.header{background:#231F20;padding:14px 20px;display:flex;justify-content:space-between;align-items:center;}.header-left{color:#fff;font-weight:700;font-size:10px;letter-spacing:0.06em;}.header-right{color:#C4B8AE;font-size:8.5px;}.red-bar{height:3px;background:#EB1C24;}.title-block{background:#f5f3f0;padding:16px 20px;margin-top:16px;border-radius:5px;}.title-block h1{font-size:18px;font-weight:800;margin-bottom:4px;}.title-block .sub{font-size:10px;color:#666;}.params-bar{display:flex;background:#231F20;border-radius:5px;margin-top:12px;overflow:hidden;}.params-bar .param{flex:1;text-align:center;padding:10px 8px;}.params-bar .param-val{color:#fff;font-weight:700;font-size:12px;}.params-bar .param-lbl{color:#b4bec8;font-size:8px;margin-top:3px;}.cards{display:flex;gap:10px;margin-top:14px;}.card{flex:1;border:1px solid #ddd;border-radius:5px;overflow:hidden;}.card-accent{height:3px;}.card-body{padding:14px 16px;}.card h3{font-size:8.5px;text-transform:uppercase;letter-spacing:0.08em;color:#888;margin-bottom:8px;}.card .total{font-size:22px;font-weight:800;margin-bottom:10px;}.card table{width:100%;border-collapse:collapse;}.card td{padding:3px 0;font-size:9.5px;}.card .total-row td{font-weight:700;font-size:10.5px;padding-top:8px;border-top:1px solid #ddd;}.card .green{color:#2d7a4f;}.card .gray{color:#999;}.delta-banner{text-align:center;padding:12px;border-radius:5px;margin-top:14px;color:#fff;}.delta-banner .big{font-size:13px;font-weight:700;}.delta-banner .sm{font-size:9px;opacity:0.85;margin-top:3px;}.section-heading{font-size:15px;font-weight:800;margin-top:24px;margin-bottom:4px;}.section-rule{width:40px;height:2px;background:#EB1C24;margin-bottom:12px;}.cta-box{background:#231F20;border-radius:6px;padding:18px 22px;margin-top:24px;border-left:4px solid #EB1C24;}.cta-box h3{color:#fff;font-size:14px;margin-bottom:6px;}.cta-box p{color:#b4c4d2;font-size:9.5px;line-height:1.6;}.cta-box .email{color:#4C9CC9;font-weight:700;font-size:10px;margin-top:10px;}.footer{text-align:center;font-size:8px;color:#999;margin-top:20px;padding-top:10px;border-top:1px solid #eee;}.print-bar{text-align:center;padding:20px;}.print-bar button{font-family:inherit;padding:12px 32px;font-size:14px;font-weight:700;background:#231F20;color:#fff;border:none;border-radius:6px;cursor:pointer;}.print-bar button:hover{opacity:0.9;}</style></head><body>'
+    + '<div class="no-print print-bar"><button onclick="window.print()">\uD83D\uDDA8\uFE0F Print or Save as PDF</button><p style="font-size:12px;color:#888;margin-top:8px;">Use your browser\'s print dialog \u2192 "Save as PDF" to download.</p></div>'
+    + '<div class="page"><div class="header"><div class="header-left">MAIN LINE TALENT GROUP</div><div class="header-right">mainlinetalent.com</div></div><div class="red-bar"></div>'
+    + '<div class="title-block"><h1>Workforce Cost Analysis</h1><div class="sub">Role: '+roleLabel+industryLabel+'</div><div class="sub">Prepared by Main Line Talent Group  \u00b7  '+dateStr+'</div></div>'
+    + '<div class="params-bar"><div class="param"><div class="param-val">$'+s.salary.toLocaleString()+'</div><div class="param-lbl">Salary</div></div><div class="param"><div class="param-val">$'+s.rate+'/hr</div><div class="param-lbl">Bill Rate</div></div><div class="param"><div class="param-val">'+s.months+' months</div><div class="param-lbl">Engagement</div></div><div class="param"><div class="param-val">'+stateClean+'</div><div class="param-lbl">State</div></div><div class="param"><div class="param-val">'+billingLabel+'</div><div class="param-lbl">Billing</div></div></div>'
+    + '<div class="cards"><div class="card"><div class="card-accent" style="background:#999;"></div><div class="card-body"><h3>Direct W-2 Hire</h3><div class="total">$'+Math.round(s.dTotal).toLocaleString()+'</div><table>'
+    + '<tr><td>Base Salary (Prorated)</td><td style="text-align:right;">$'+Math.round(s.salaryPro).toLocaleString()+'</td></tr>'
+    + '<tr style="color:#999;font-size:9.5px;"><td style="padding-left:14px;">Employer Payroll Taxes</td><td style="text-align:right;">$'+Math.round(s.taxTotal).toLocaleString()+'</td></tr>'
+    + '<tr style="color:#999;font-size:9.5px;"><td style="padding-left:14px;">Health Insurance</td><td style="text-align:right;">$'+Math.round(s.healthAmt).toLocaleString()+'</td></tr>'
+    + '<tr style="color:#999;font-size:9.5px;"><td style="padding-left:14px;">401(k) Match (3%)</td><td style="text-align:right;">$'+Math.round(s.k401).toLocaleString()+'</td></tr>'
+    + '<tr style="color:#999;font-size:9.5px;"><td style="padding-left:14px;">PTO Cost (~19 Days)</td><td style="text-align:right;">$'+Math.round(s.ptoAmt).toLocaleString()+'</td></tr>'
+    + '<tr style="color:#999;font-size:9.5px;"><td style="padding-left:14px;">IT &amp; Equipment</td><td style="text-align:right;">$'+Math.round(s.itAmt).toLocaleString()+'</td></tr>'
+    + '<tr style="color:#999;font-size:9.5px;"><td style="padding-left:14px;">Recruiting / Placement</td><td style="text-align:right;">$'+Math.round(s.recruitAmt).toLocaleString()+'</td></tr>'
+    + '<tr style="color:#999;font-size:9.5px;"><td style="padding-left:14px;">Ramp Cost</td><td style="text-align:right;">$'+Math.round(s.rampCost).toLocaleString()+'</td></tr>'
+    + bonusRow
+    + '<tr class="total-row"><td>TOTAL TRUE COST</td><td style="text-align:right;">$'+Math.round(s.dTotal).toLocaleString()+'</td></tr>'
+    + '<tr class="gray"><td>Effective Hourly Rate</td><td style="text-align:right;">'+fmtHr(s.dEhr)+'</td></tr>'
+    + '</table></div></div>'
+    + '<div class="card"><div class="card-accent" style="background:#2C5E79;"></div><div class="card-body"><h3>'+(s.cHeading||'Contractor via MLTG')+'</h3><div class="total">$'+Math.round(s.cTotal).toLocaleString()+'</div><table>'
+    + '<tr><td>Bill Rate \u00d7 Hours Billed</td><td style="text-align:right;">$'+Math.round(s.cTotal).toLocaleString()+'</td></tr>'
+    + '<tr class="green" style="font-size:9.5px;"><td style="padding-left:14px;">Payroll Taxes</td><td style="text-align:right;">$0 \u2014 not your cost</td></tr>'
+    + '<tr class="green" style="font-size:9.5px;"><td style="padding-left:14px;">Benefits &amp; Insurance</td><td style="text-align:right;">$0 \u2014 not your cost</td></tr>'
+    + '<tr class="green" style="font-size:9.5px;"><td style="padding-left:14px;">IT &amp; Equipment</td><td style="text-align:right;">$0 \u2014 not your cost</td></tr>'
+    + '<tr class="green" style="font-size:9.5px;"><td style="padding-left:14px;">Recruiting Fee</td><td style="text-align:right;">$0 \u2014 included</td></tr>'
+    + '<tr class="green" style="font-size:9.5px;"><td style="padding-left:14px;">Ramp Time</td><td style="text-align:right;">Minimal</td></tr>'
+    + '<tr><td>&nbsp;</td><td></td></tr><tr><td>&nbsp;</td><td></td></tr>'
+    + '<tr class="total-row"><td>TOTAL ENGAGEMENT COST</td><td style="text-align:right;">$'+Math.round(s.cTotal).toLocaleString()+'</td></tr>'
+    + '<tr class="gray"><td>Effective Hourly Rate</td><td style="text-align:right;">'+fmtHr(s.cEhr)+'</td></tr>'
+    + '</table></div></div></div>'
+    + '<div class="delta-banner" style="background:'+(contractorWins?'#2C5E79':'#2d7a4f')+';"><div class="big">'+deltaMsg+'</div><div class="sm">Break-even: approximately month '+s.xMo+'  \u00b7  Annualized Direct Hire: $'+Math.round(s.dAnnual).toLocaleString()+'</div></div>'
+    + '<div style="page-break-before:always;"></div><div class="header" style="margin-top:0;"><div class="header-left">MAIN LINE TALENT GROUP</div><div class="header-right">Workforce Cost Planner \u00b7 '+dateStr+'</div></div><div class="red-bar"></div>'
+    + '<div class="section-heading">Analysis &amp; Recommendations</div><div class="section-rule"></div>'
+    + sectionHTML
+    + '<div class="cta-box"><h3>Ready to move forward? Let\u2019s talk.</h3><p>Main Line Talent Group specializes in placing top-tier contractors and permanent hires across technology, finance, and professional services.</p><div class="email">support@mainlinetalent.com</div></div>'
+    + '<div class="footer">Main Line Talent Group  \u00b7  Workforce Cost Planner  \u00b7  For Discussion Purposes Only</div>'
+    + '</div></body></html>';
+
+  const w = window.open('', '_blank');
+  if (w) { w.document.write(html); w.document.close(); }
+  else {
+    const blob = new Blob([html], {type:'text/html'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'MLTG_CostAnalysis.html';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
 }
 
 async function submitToHubSpot(data) {
@@ -2802,7 +2873,6 @@ async function submitToHubSpot(data) {
   if (data.company) fields.push({ name: 'company', value: data.company });
   if (data.industry) fields.push({ name: 'industry', value: data.industry });
   if (data.summary) fields.push({ name: 'message', value: data.summary });
-  if (data.reportURL) fields.push({ name: 'workforce_planning', value: data.reportURL });
 
   const payload = {
     fields: fields,
@@ -2899,39 +2969,30 @@ async function submitEmailCapture() {
   btnText.textContent = 'Preparing your report…';
   spinner.style.display = 'block';
 
-  // Build report data and URL
-  const reportData = buildReportData();
-  const reportURL = buildReportURL(reportData);
-  const summary = buildCalculatorSummary(reportData, reportURL);
-
-  // Submit to HubSpot
+  // Submit to HubSpot (don't let failure block the PDF)
   const hubData = {
     email: email,
     firstName: $('captureFirst').value.trim(),
     lastName: $('captureLast').value.trim(),
     company: $('captureCompany').value.trim(),
     industry: $('projectIndustry').value,
-    summary: summary,
-    reportURL: reportURL
+    summary: buildCalculatorSummary()
   };
+  submitToHubSpot(hubData); // fire and forget
 
-  const hubSuccess = await submitToHubSpot(hubData);
-
-  // Always show success with report link
-  $('confirmEmail').textContent = email;
-  $('reportLink').href = reportURL;
-  $('emailFormState').style.display = 'none';
-  $('emailSuccessState').style.display = '';
-
-  // If HubSpot failed, show a note but still give them the report
-  const hubNote = $('hubspotNote');
-  if (hubNote) {
-    hubNote.style.display = hubSuccess ? 'none' : 'block';
+  // Generate the PDF report
+  try {
+    const narrative = fetchNarrative(_snap);
+    buildPDF(_snap, narrative);
+  } catch (e) {
+    console.error('Report generation error:', e);
+    alert('Could not generate report: ' + e.message);
   }
 
   btn.disabled = false;
   btnText.textContent = 'Send Me the Report';
   spinner.style.display = 'none';
+  closeEmailModal();
 }
 
 // Close modal on Escape key
@@ -2939,200 +3000,7 @@ document.addEventListener('keydown', function(e) {
   if (e.key === 'Escape' && $('emailModal').classList.contains('open')) closeEmailModal();
 });
 
-// ══════════════════════════════════════════════════
-// ── REPORT VIEWER MODE ──
-// If URL contains ?report=, hide calculator and render the report
-// ══════════════════════════════════════════════════
-(function checkReportMode() {
-  const params = new URLSearchParams(window.location.search);
-  const encoded = params.get('report');
-  if (!encoded) return; // Normal calculator mode
 
-  // Decode report data
-  let data;
-  try {
-    const json = decodeURIComponent(escape(atob(decodeURIComponent(encoded))));
-    data = JSON.parse(json);
-  } catch (e) {
-    console.error('Failed to decode report data:', e);
-    document.body.innerHTML = '<div style="text-align:center;padding:60px;font-family:sans-serif;"><h2>Report Not Found</h2><p>This link doesn\'t contain valid report data. Please generate a new report from the Workforce Cost Planner.</p></div>';
-    return;
-  }
-
-  // Hide the entire calculator UI
-  document.querySelector('.wrapper').style.display = 'none';
-
-  // Inject report styles
-  const reportCSS = document.createElement('style');
-  reportCSS.textContent = `
-    @page { size: letter; margin: 0.5in 0.6in; }
-    @media print { .no-print { display: none !important; } .report-page { box-shadow: none !important; } body { background: #fff; } }
-    .report-toolbar { text-align: center; padding: 18px; background: #231F20; }
-    .report-toolbar button { font-family: inherit; padding: 11px 30px; font-size: 14px; font-weight: 700; color: #fff; border: none; border-radius: 6px; cursor: pointer; margin: 0 6px; }
-    .report-toolbar .btn-print { background: #EB1C24; }
-    .report-toolbar .btn-back { background: #2C5E79; }
-    .report-toolbar button:hover { opacity: 0.9; }
-    .report-page { max-width: 800px; margin: 24px auto; background: #fff; border-radius: 8px; box-shadow: 0 2px 20px rgba(0,0,0,0.08); overflow: hidden; }
-    .rpt-header { background: #231F20; padding: 16px 28px; display: flex; justify-content: space-between; align-items: center; }
-    .rpt-header-left { color: #fff; font-weight: 700; font-size: 11px; letter-spacing: 0.06em; }
-    .rpt-header-right { color: #C4B8AE; font-size: 9px; }
-    .rpt-red-bar { height: 3px; background: #EB1C24; }
-    .rpt-content { padding: 28px 32px 36px; font-size: 12px; line-height: 1.5; }
-    .rpt-title-block { background: #f5f3f0; padding: 18px 22px; border-radius: 6px; margin-bottom: 18px; }
-    .rpt-title-block h1 { font-size: 20px; font-weight: 800; margin: 0 0 4px; }
-    .rpt-title-block .rpt-sub { font-size: 11px; color: #666; margin: 0; }
-    .rpt-params { display: flex; background: #231F20; border-radius: 6px; overflow: hidden; margin-bottom: 20px; }
-    .rpt-params .rpt-param { flex: 1; text-align: center; padding: 12px 8px; }
-    .rpt-params .rpt-pv { color: #fff; font-weight: 700; font-size: 13px; }
-    .rpt-params .rpt-pl { color: #b4bec8; font-size: 8.5px; margin-top: 3px; }
-    .rpt-cards { display: flex; gap: 12px; margin-bottom: 18px; }
-    .rpt-card { flex: 1; border: 1px solid #e0e0e0; border-radius: 6px; overflow: hidden; }
-    .rpt-card-accent { height: 3px; }
-    .rpt-card-body { padding: 16px 18px; }
-    .rpt-card h3 { font-size: 9px; text-transform: uppercase; letter-spacing: 0.08em; color: #888; margin: 0 0 8px; }
-    .rpt-card .rpt-total { font-size: 24px; font-weight: 800; margin-bottom: 10px; }
-    .rpt-card table { width: 100%; border-collapse: collapse; }
-    .rpt-card td { padding: 3.5px 0; font-size: 10px; }
-    .rpt-card .rpt-indent td:first-child { padding-left: 14px; }
-    .rpt-card .rpt-indent { color: #999; font-size: 9.5px; }
-    .rpt-card .rpt-total-row td { font-weight: 700; font-size: 11px; padding-top: 10px; border-top: 1px solid #ddd; }
-    .rpt-card .rpt-ehr td { color: #999; font-size: 9.5px; }
-    .rpt-green { color: #2d7a4f; }
-    .rpt-delta { text-align: center; padding: 14px; border-radius: 6px; margin-bottom: 24px; color: #fff; }
-    .rpt-delta .rpt-big { font-size: 14px; font-weight: 700; }
-    .rpt-delta .rpt-sm { font-size: 9.5px; opacity: 0.85; margin-top: 4px; }
-    .rpt-section-heading { font-size: 16px; font-weight: 800; margin: 28px 0 6px; }
-    .rpt-section-rule { width: 40px; height: 2.5px; background: #EB1C24; margin-bottom: 16px; }
-    .rpt-narr { margin-bottom: 18px; }
-    .rpt-narr-hdr { display: inline-block; padding: 5px 14px; border-radius: 4px; font-size: 10px; font-weight: 700; letter-spacing: 0.08em; color: #fff; margin-bottom: 8px; }
-    .rpt-narr-body { font-size: 11px; color: #444; line-height: 1.7; }
-    .rpt-cta { background: #231F20; border-radius: 8px; padding: 22px 26px; margin-top: 28px; border-left: 4px solid #EB1C24; }
-    .rpt-cta h3 { color: #fff; font-size: 15px; margin: 0 0 8px; }
-    .rpt-cta p { color: #b4c4d2; font-size: 10.5px; line-height: 1.6; margin: 0; }
-    .rpt-cta .rpt-email { color: #4C9CC9; font-weight: 700; font-size: 11px; margin-top: 12px; }
-    .rpt-footer { text-align: center; font-size: 8.5px; color: #999; margin-top: 22px; padding-top: 12px; border-top: 1px solid #eee; }
-    @media (max-width: 600px) { .rpt-content { padding: 18px 16px 28px; } .rpt-cards { flex-direction: column; } .rpt-params { flex-wrap: wrap; } .rpt-params .rpt-param { min-width: 33%; } }
-  `;
-  document.head.appendChild(reportCSS);
-
-  // Build narrative
-  const s = data.roles[0];
-  const contractorWins = s.delta > 0;
-  const savingsAmt = '$' + Math.round(Math.abs(s.delta)).toLocaleString();
-  const ind = data.industry || '';
-  const shortTerm = s.months <= 12;
-  const longTerm = s.months > 24;
-  const highSalary = s.salary >= 150000;
-
-  const industryInsights = {
-    'Manufacturing': {
-      dp: 'Manufacturing environments reward institutional knowledge of shop floor systems, safety protocols, and production scheduling.',
-      cp: 'Manufacturing projects often follow cyclical demand patterns, making contractor flexibility particularly valuable during peak periods or system implementations.',
-      rk: 'Manufacturing roles may require OSHA training, equipment-specific certifications, and familiarity with ERP systems that take time regardless of employment model.'
-    },
-    'Healthcare': {
-      dp: 'Healthcare organizations benefit from permanent hires who can navigate HIPAA compliance, EHR integrations, and the regulatory landscape.',
-      cp: 'Healthcare IT projects often have strict go-live deadlines tied to regulatory requirements, and contractors bring specialized implementation experience without long-term cost obligations.',
-      rk: 'Healthcare roles may require background checks, credentialing, and HIPAA training that add 2-4 weeks to onboarding regardless of employment model.'
-    },
-    'Financial Services': {
-      dp: 'Financial services firms benefit from permanent hires who understand SOX compliance, regulatory reporting, and risk management frameworks.',
-      cp: 'Financial services projects often have immovable regulatory deadlines, and contractors with specific compliance or platform experience can hit the ground running.',
-      rk: 'Financial services roles typically require background checks, FINRA/SEC compliance, and may need specific security clearances that affect onboarding timelines.'
-    },
-    'Technology': {
-      dp: 'Technology companies benefit from permanent hires who accumulate deep codebase knowledge, understand architectural decisions, and contribute to long-term technical direction.',
-      cp: 'Tech projects often require specialized skills for defined sprints or migrations, and contractors bring focused expertise without the competitive salary pressure of the permanent market.',
-      rk: 'Technology roles involve IP considerations and codebase access. Ensure contractor agreements include appropriate IP assignment and non-compete clauses.'
-    }
-  };
-  const ins = industryInsights[ind] || {
-    dp: 'A permanent hire builds institutional knowledge that compounds over time, becoming more valuable as they understand your systems, culture, and processes.',
-    cp: 'Contractors bring focused expertise without long-term overhead, and the engagement can flex up or down with project needs.',
-    rk: 'Consider the compliance and onboarding requirements specific to your industry when evaluating timeline expectations.'
-  };
-
-  const obligationTotal = Math.round(s.taxTotal + s.healthAmt + s.k401 + s.ptoAmt + s.itAmt + s.recruitAmt + s.rampCost);
-  const sections = [
-    { title: 'DIRECT HIRE \u2014 PROS AND CONS', color: '#8c8c8c',
-      body: ins.dp + ' At a salary of $' + s.salary.toLocaleString() + ', the true loaded cost including taxes, benefits, recruiting, and ramp is ' + fmtD(s.dTotal) + ' over ' + s.months + ' months. However, the upfront investment is significant: recruiting costs of $' + Math.round(s.recruitAmt).toLocaleString() + ' and ramp productivity loss add $' + Math.round(s.recruitAmt + s.rampCost).toLocaleString() + ' before the hire reaches full productivity. The trade-off is less flexibility. A permanent hire commits the organization to ongoing salary, benefits, and employment obligations beyond the project timeline.' },
-    { title: 'CONTRACTOR \u2014 PROS AND CONS', color: '#2C5E79',
-      body: ins.cp + ' The primary financial advantage comes from eliminating employer-side taxes, benefits, recruiting fees, and ramp-up productivity loss, which total $' + obligationTotal.toLocaleString() + ' on the direct-hire side. ' + (contractorWins ? 'At ' + fmtD(s.cTotal) + ' total engagement cost, contracting saves ' + savingsAmt + ' over this ' + s.months + '-month period.' : 'In this scenario, the contractor cost of ' + fmtD(s.cTotal) + ' is ' + savingsAmt + ' higher than direct hire over ' + s.months + ' months, but offers operational flexibility and zero long-term commitment.') + ' The break-even point is approximately month ' + s.xMo + '.' },
-    { title: 'POTENTIAL RISKS TO CONSIDER', color: '#b45014',
-      body: ins.rk + ' State-level tax obligations vary and can affect the true cost differential. ' + (longTerm ? 'For a ' + s.months + '-month engagement, contractor retention is a real risk. Consider whether contract renewal terms or a conversion clause should be negotiated upfront.' : '') + (shortTerm ? 'For shorter engagements, the recruiting and ramp costs of a direct hire are harder to amortize, which generally favors contracting.' : '') },
-    { title: 'AREAS TO RESEARCH FURTHER', color: '#2C5E79',
-      body: 'Benchmark the proposed bill rate against current market data for comparable roles in your region. Review your organization\'s benefits package to confirm the cost assumptions used in this analysis. ' + (highSalary ? 'For roles at this salary level, explore whether retained search or executive placement may yield a stronger candidate pool.' : 'Consider whether the role\'s scope may evolve beyond the initial engagement, which could shift the cost calculus toward direct hire.') }
-  ];
-
-  const dateStr = new Date(data.generatedAt || Date.now()).toLocaleDateString('en-US', {year:'numeric', month:'long', day:'numeric'});
-  const billingLabel = s.mode === 'hourly' ? 'Hourly' : s.mode === 'weekly' ? 'Guaranteed Hours' : 'Monthly Retainer';
-  const deltaMsg = contractorWins
-    ? 'Contractor saves ' + fmtD(Math.abs(s.delta)) + ' over this engagement'
-    : 'Direct Hire is ' + fmtD(Math.abs(s.delta)) + ' lower cost over this engagement';
-  const bonusRow = s.bonusCost > 0 ? '<tr class="rpt-indent"><td>Bonuses</td><td style="text-align:right;">' + fmtD(s.bonusCost) + '</td></tr>' : '';
-
-  // Multi-role table
-  let multiHTML = '';
-  if (data.roles.length > 1) {
-    let trs = '', gD = 0, gC = 0;
-    data.roles.forEach(r => {
-      gD += r.dTotal; gC += r.cTotal;
-      const d = r.dTotal - r.cTotal;
-      trs += '<tr style="border-top:1px solid #eee;"><td style="padding:6px 12px;">' + r.name + '</td><td style="text-align:right;padding:6px 12px;">' + fmtD(r.dTotal) + '</td><td style="text-align:right;padding:6px 12px;">' + fmtD(r.cTotal) + '</td><td style="text-align:right;padding:6px 12px;color:' + (d>0?'#2C5E79':'#2d7a4f') + ';font-weight:600;">' + fmtD(Math.abs(d)) + '</td></tr>';
-    });
-    multiHTML = '<div style="margin-bottom:18px;border:1px solid #e0e0e0;border-radius:6px;overflow:hidden;"><table style="width:100%;border-collapse:collapse;font-size:10.5px;"><thead><tr style="background:#f5f3f0;"><th style="text-align:left;padding:8px 12px;">Role</th><th style="text-align:right;padding:8px 12px;">Direct Hire</th><th style="text-align:right;padding:8px 12px;">Contractor</th><th style="text-align:right;padding:8px 12px;">Savings</th></tr></thead><tbody>' + trs + '<tr style="border-top:2px solid #231F20;font-weight:700;"><td style="padding:8px 12px;">All Roles</td><td style="text-align:right;padding:8px 12px;">' + fmtD(gD) + '</td><td style="text-align:right;padding:8px 12px;">' + fmtD(gC) + '</td><td style="text-align:right;padding:8px 12px;color:' + ((gD-gC)>0?'#2C5E79':'#2d7a4f') + ';">' + fmtD(Math.abs(gD-gC)) + '</td></tr></tbody></table></div>';
-  }
-
-  let narrHTML = '';
-  sections.forEach(sec => {
-    narrHTML += '<div class="rpt-narr"><div class="rpt-narr-hdr" style="background:' + sec.color + ';">' + sec.title + '</div><div class="rpt-narr-body">' + sec.body + '</div></div>';
-  });
-
-  // Build report HTML
-  const reportHTML = ''
-    + '<div class="no-print report-toolbar"><button class="btn-print" onclick="window.print()">🖨️ Print / Save as PDF</button><button class="btn-back" onclick="window.location.href=window.location.pathname">← Back to Calculator</button></div>'
-    + '<div class="report-page">'
-    + '<div class="rpt-header"><div class="rpt-header-left">MAIN LINE TALENT GROUP</div><div class="rpt-header-right">mainlinetalent.com</div></div>'
-    + '<div class="rpt-red-bar"></div>'
-    + '<div class="rpt-content">'
-    + '<div class="rpt-title-block"><h1>Workforce Cost Analysis</h1><p class="rpt-sub">Role: ' + (s.name || 'General hiring evaluation') + (ind ? '  \u00b7  Industry: ' + ind : '') + '</p><p class="rpt-sub">Prepared by Main Line Talent Group  \u00b7  ' + dateStr + '</p></div>'
-    + '<div class="rpt-params"><div class="rpt-param"><div class="rpt-pv">$' + s.salary.toLocaleString() + '</div><div class="rpt-pl">Salary</div></div><div class="rpt-param"><div class="rpt-pv">$' + s.rate + '/hr</div><div class="rpt-pl">Bill Rate</div></div><div class="rpt-param"><div class="rpt-pv">' + s.months + ' months</div><div class="rpt-pl">Engagement</div></div><div class="rpt-param"><div class="rpt-pv">' + (s.state||'') + '</div><div class="rpt-pl">State</div></div><div class="rpt-param"><div class="rpt-pv">' + billingLabel + '</div><div class="rpt-pl">Billing</div></div></div>'
-    + multiHTML
-    + '<div class="rpt-cards">'
-    + '<div class="rpt-card"><div class="rpt-card-accent" style="background:#999;"></div><div class="rpt-card-body"><h3>Direct W-2 Hire</h3><div class="rpt-total">' + fmtD(s.dTotal) + '</div><table>'
-    + '<tr><td>Base Salary (Prorated)</td><td style="text-align:right;">' + fmtD(s.salaryPro) + '</td></tr>'
-    + '<tr class="rpt-indent"><td>Employer Payroll Taxes</td><td style="text-align:right;">' + fmtD(s.taxTotal) + '</td></tr>'
-    + '<tr class="rpt-indent"><td>Health Insurance</td><td style="text-align:right;">' + fmtD(s.healthAmt) + '</td></tr>'
-    + '<tr class="rpt-indent"><td>401(k) Match (3%)</td><td style="text-align:right;">' + fmtD(s.k401) + '</td></tr>'
-    + '<tr class="rpt-indent"><td>PTO Cost (~19 Days)</td><td style="text-align:right;">' + fmtD(s.ptoAmt) + '</td></tr>'
-    + '<tr class="rpt-indent"><td>IT &amp; Equipment</td><td style="text-align:right;">' + fmtD(s.itAmt) + '</td></tr>'
-    + '<tr class="rpt-indent"><td>Recruiting / Placement</td><td style="text-align:right;">' + fmtD(s.recruitAmt) + '</td></tr>'
-    + '<tr class="rpt-indent"><td>Ramp Cost</td><td style="text-align:right;">' + fmtD(s.rampCost) + '</td></tr>'
-    + bonusRow
-    + '<tr class="rpt-total-row"><td>Total True Cost</td><td style="text-align:right;">' + fmtD(s.dTotal) + '</td></tr>'
-    + '<tr class="rpt-ehr"><td>Effective Hourly Rate</td><td style="text-align:right;">' + fmtHr(s.dEhr) + '</td></tr>'
-    + '</table></div></div>'
-    + '<div class="rpt-card"><div class="rpt-card-accent" style="background:#2C5E79;"></div><div class="rpt-card-body"><h3>' + (s.cHeading||'Contractor via MLTG') + '</h3><div class="rpt-total">' + fmtD(s.cTotal) + '</div><table>'
-    + '<tr><td>Bill Rate \u00d7 Hours Billed</td><td style="text-align:right;">' + fmtD(s.cTotal) + '</td></tr>'
-    + '<tr class="rpt-indent rpt-green"><td>Payroll Taxes</td><td style="text-align:right;">$0 \u2014 not your cost</td></tr>'
-    + '<tr class="rpt-indent rpt-green"><td>Benefits &amp; Insurance</td><td style="text-align:right;">$0 \u2014 not your cost</td></tr>'
-    + '<tr class="rpt-indent rpt-green"><td>IT &amp; Equipment</td><td style="text-align:right;">$0 \u2014 not your cost</td></tr>'
-    + '<tr class="rpt-indent rpt-green"><td>Recruiting Fee</td><td style="text-align:right;">$0 \u2014 included</td></tr>'
-    + '<tr class="rpt-indent rpt-green"><td>Ramp Time</td><td style="text-align:right;">Minimal</td></tr>'
-    + '<tr><td>&nbsp;</td><td></td></tr>'
-    + '<tr class="rpt-total-row"><td>Total Engagement Cost</td><td style="text-align:right;">' + fmtD(s.cTotal) + '</td></tr>'
-    + '<tr class="rpt-ehr"><td>Effective Hourly Rate</td><td style="text-align:right;">' + fmtHr(s.cEhr) + '</td></tr>'
-    + '</table></div></div></div>'
-    + '<div class="rpt-delta" style="background:' + (contractorWins?'#2C5E79':'#2d7a4f') + ';"><div class="rpt-big">' + deltaMsg + '</div><div class="rpt-sm">Break-even: approximately month ' + s.xMo + '  \u00b7  Annualized Direct Hire: ' + fmtD(s.dAnnual) + '</div></div>'
-    + '<div class="rpt-section-heading">Analysis &amp; Recommendations</div><div class="rpt-section-rule"></div>'
-    + narrHTML
-    + '<div class="rpt-cta"><h3>Ready to move forward? Let\u2019s talk.</h3><p>Main Line Talent Group specializes in placing top-tier contractors and permanent hires across technology, finance, and professional services.</p><div class="rpt-email">support@mainlinetalent.com</div></div>'
-    + '<div class="rpt-footer">Main Line Talent Group  \u00b7  Workforce Cost Planner  \u00b7  For Discussion Purposes Only</div>'
-    + '</div></div>';
-
-  document.body.innerHTML = reportHTML;
-  document.title = 'Cost Analysis \u2014 ' + (s.name || 'Workforce') + ' \u2014 MLTG';
-})();
 </script>
 </body>
 </html>
