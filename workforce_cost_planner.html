@@ -1469,23 +1469,23 @@
           <label style="font-size:0.72em;font-weight:700;color:#999;text-transform:uppercase;letter-spacing:0.06em;display:block;margin-bottom:5px;">Industry <span style="color:var(--red);">*</span></label>
           <select id="projectIndustry" class="role-input" style="width:100%;" onchange="updateProjectLabel();validateContext();" required>
             <option value="">— Select industry —</option>
-            <option value="Manufacturing">Manufacturing</option>
-            <option value="Distribution & Logistics">Distribution &amp; Logistics</option>
-            <option value="Healthcare">Healthcare</option>
-            <option value="Financial Services">Financial Services</option>
-            <option value="Technology">Technology</option>
-            <option value="Retail & E-commerce">Retail &amp; E-commerce</option>
-            <option value="Construction & Engineering">Construction &amp; Engineering</option>
-            <option value="Energy & Utilities">Energy &amp; Utilities</option>
-            <option value="Government & Public Sector">Government &amp; Public Sector</option>
-            <option value="Education">Education</option>
-            <option value="Nonprofit">Nonprofit</option>
-            <option value="Professional Services">Professional Services</option>
-            <option value="Food & Beverage">Food &amp; Beverage</option>
-            <option value="Automotive">Automotive</option>
             <option value="Aerospace & Defense">Aerospace &amp; Defense</option>
+            <option value="Automotive">Automotive</option>
+            <option value="Construction & Engineering">Construction &amp; Engineering</option>
+            <option value="Distribution & Logistics">Distribution &amp; Logistics</option>
+            <option value="Education">Education</option>
+            <option value="Energy & Utilities">Energy &amp; Utilities</option>
+            <option value="Financial Services">Financial Services</option>
+            <option value="Food & Beverage">Food &amp; Beverage</option>
+            <option value="Government & Public Sector">Government &amp; Public Sector</option>
+            <option value="Healthcare">Healthcare</option>
+            <option value="Manufacturing">Manufacturing</option>
+            <option value="Nonprofit">Nonprofit</option>
             <option value="Pharma & Life Sciences">Pharma &amp; Life Sciences</option>
+            <option value="Professional Services">Professional Services</option>
             <option value="Real Estate">Real Estate</option>
+            <option value="Retail & E-commerce">Retail &amp; E-commerce</option>
+            <option value="Technology">Technology</option>
             <option value="Other">Other</option>
           </select>
         </div>
@@ -1566,9 +1566,10 @@
         <p style="font-size:0.88em;color:#555;line-height:1.6;margin-bottom:20px;">Your personalized workforce cost analysis has been sent to <strong id="confirmEmail"></strong>.</p>
         <a id="reportLink" href="#" target="_blank" class="email-modal-submit" style="display:inline-flex;text-decoration:none;width:auto;padding:12px 28px;background:#2C5E79;">📋 View Your Report Now</a>
         <p style="font-size:0.78em;color:#999;margin-top:14px;line-height:1.5;">You can also print or save your report as a PDF from the report page.</p>
+        <div id="hubspotNote" style="display:none;font-size:0.78em;color:#b45014;margin-top:10px;line-height:1.5;">Note: We had trouble sending the email copy. Your report is still available via the link above.</div>
         <div style="margin-top:14px;padding-top:14px;border-top:1px solid #eee;">
           <p style="font-size:0.82em;color:#888;margin-bottom:12px;">Want to discuss your results with a workforce planning specialist?</p>
-          <a href="mailto:contact@mainlinetalentgroup.com" style="font-size:0.85em;color:#2C5E79;font-weight:700;text-decoration:none;">contact@mainlinetalentgroup.com</a>
+          <a href="mailto:support@mainlinetalent.com" style="font-size:0.85em;color:#2C5E79;font-weight:700;text-decoration:none;">support@mainlinetalent.com</a>
         </div>
         <div style="margin-top:16px;">
           <a href="#" onclick="closeEmailModal();return false;" style="font-size:0.82em;color:#999;text-decoration:none;">Close</a>
@@ -2743,8 +2744,8 @@ function buildReportData() {
 
 function buildReportURL(data) {
   const json = JSON.stringify(data);
-  const encoded = encodeURIComponent(btoa(json));
-  // Use relative path so it works on any host
+  // Encode UTF-8 characters properly before base64
+  const encoded = encodeURIComponent(btoa(unescape(encodeURIComponent(json))));
   const base = window.location.href.replace(/\/[^\/]*$/, '/');
   return base + 'report.html?d=' + encoded;
 }
@@ -2785,43 +2786,48 @@ async function submitToHubSpot(data) {
   if (data.company) fields.push({ name: 'company', value: data.company });
   if (data.industry) fields.push({ name: 'industry', value: data.industry });
   if (data.summary) fields.push({ name: 'message', value: data.summary });
-  if (data.reportURL) fields.push({ name: 'workforce_planning_url', value: data.reportURL });
+  if (data.reportURL) fields.push({ name: 'website', value: data.reportURL });
 
-  const payload = {
-    fields: fields,
-    context: {
-      pageUri: window.location.href,
-      pageName: 'Workforce Cost Planner'
-    },
-    legalConsentOptions: {
-      consent: {
-        consentToProcess: true,
-        text: 'I agree to receive this report and occasional workforce planning insights from Main Line Talent Group.',
-        communications: [
-          {
-            value: true,
-            subscriptionTypeId: 999,
-            text: 'Workforce planning insights'
-          }
-        ]
-      }
+  // Use a hidden form + iframe to submit (avoids CORS issues)
+  return new Promise((resolve) => {
+    try {
+      // Create hidden iframe
+      const iframeName = 'hs_submit_' + Date.now();
+      const iframe = document.createElement('iframe');
+      iframe.name = iframeName;
+      iframe.style.display = 'none';
+      document.body.appendChild(iframe);
+
+      // Create hidden form
+      const form = document.createElement('form');
+      form.method = 'POST';
+      form.action = 'https://forms.hubspot.com/uploads/form/v2/' + PORTAL_ID + '/' + FORM_GUID;
+      form.target = iframeName;
+      form.style.display = 'none';
+
+      // Add fields
+      fields.forEach(f => {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = f.name;
+        input.value = f.value;
+        form.appendChild(input);
+      });
+
+      document.body.appendChild(form);
+      form.submit();
+
+      // Clean up after a short delay
+      setTimeout(() => {
+        form.remove();
+        iframe.remove();
+        resolve(true);
+      }, 2000);
+    } catch (e) {
+      console.error('HubSpot submission failed:', e);
+      resolve(false);
     }
-  };
-
-  try {
-    const resp = await fetch(
-      'https://api.hsforms.com/submissions/v3/integration/submit/' + PORTAL_ID + '/' + FORM_GUID + '?region=na1',
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      }
-    );
-    return resp.ok;
-  } catch (e) {
-    console.warn('HubSpot submission failed:', e);
-    return false;
-  }
+  });
 }
 
 async function submitEmailCapture() {
@@ -2867,13 +2873,19 @@ async function submitEmailCapture() {
     reportURL: reportURL
   };
 
-  await submitToHubSpot(hubData);
+  const hubSuccess = await submitToHubSpot(hubData);
 
-  // Show success state with report link
+  // Always show success with report link
   $('confirmEmail').textContent = email;
   $('reportLink').href = reportURL;
   $('emailFormState').style.display = 'none';
   $('emailSuccessState').style.display = '';
+
+  // If HubSpot failed, show a note but still give them the report
+  const hubNote = $('hubspotNote');
+  if (hubNote) {
+    hubNote.style.display = hubSuccess ? 'none' : 'block';
+  }
 
   btn.disabled = false;
   btnText.textContent = 'Send Me the Report';
