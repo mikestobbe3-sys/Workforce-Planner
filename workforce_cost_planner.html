@@ -2898,14 +2898,166 @@ function fetchNarrative(s) {
     contractorProsCons += 'Contracting may still be the right choice if speed-to-start, specialized expertise, or flexibility outweigh pure cost optimization. If the engagement ends earlier than '+s.months+' months, contracting becomes more competitive as direct-hire one-time costs of $'+Math.round(s.recruitAmt+s.rampCost).toLocaleString()+' have less time to amortize.';
   }
 
-  // ── INDUSTRY CONTEXT ──
-  let industryContext = 'INDUSTRY CONTEXT\n';
+  // ── INDUSTRY CONTEXT (PESTLE Framework) ──
+  const pestleData = {
+    'Aerospace & Defense': {
+      political: 'Defense budgets are subject to congressional appropriations cycles, continuing resolutions, and shifting administration priorities. Contract awards, cancellations, or sequestration can rapidly change workforce needs. Export control policy (ITAR/EAR) directly affects who can fill roles and where work can be performed.',
+      economic: 'Defense spending tends to be counter-cyclical, providing some stability during economic downturns, but the commercial aerospace segment is highly sensitive to airline capital expenditure cycles and passenger demand. Contractor bill rates in this sector tend to carry a premium reflecting clearance requirements and the limited talent pool.',
+      social: 'The industry faces a generational knowledge transfer crisis as experienced engineers and program managers retire. Younger workers increasingly prioritize work-life balance and may be less willing to accept the constraints of classified work environments. Remote work expectations conflict with facility security requirements for cleared personnel.',
+      technological: 'Digital engineering, model-based systems engineering (MBSE), and AI-driven design optimization are transforming development workflows. Organizations need talent that bridges legacy platform knowledge with modern digital tools. Cybersecurity requirements (CMMC) are creating new compliance-driven staffing needs.',
+      legal: 'Federal Acquisition Regulation (FAR) and Defense Federal Acquisition Regulation Supplement (DFARS) govern contractor labor practices. DCAA audit requirements affect how contractor costs are accounted and billed. Non-compete and IP assignment provisions must comply with both federal and state law.',
+      environmental: 'Sustainability mandates and environmental remediation obligations are creating new roles in environmental compliance and green manufacturing. Defense industrial base decarbonization goals will drive workforce needs in energy efficiency and sustainable materials.'
+    },
+    'Automotive': {
+      political: 'EV tax credits, emissions regulations, and trade policies (tariffs on imported vehicles and components) directly affect production planning and workforce needs. State-level right-to-repair legislation and autonomous vehicle regulations create varying compliance requirements across markets.',
+      economic: 'The industry is capital-intensive with long product development cycles, making workforce planning inherently forward-looking. Interest rate changes affect consumer financing and vehicle demand. The shift to EVs is restructuring the supply chain and reallocating investment from powertrain to battery and software.',
+      social: 'Consumer preference shifts toward EVs, connected vehicles, and shared mobility are reshaping the skills profile the industry needs. The traditional manufacturing workforce is aging, and attracting software talent to automotive requires competing with Silicon Valley compensation and culture.',
+      technological: 'Software-defined vehicles, autonomous driving, battery technology, and connected car platforms are the primary technology drivers. The industry needs talent that bridges traditional automotive engineering with software development, data science, and AI.',
+      legal: 'IATF 16949 quality standards, NHTSA safety regulations, and product liability considerations affect workforce requirements. Union collective bargaining agreements may restrict contractor usage in certain facilities. State lemon laws and warranty requirements create compliance staffing needs.',
+      environmental: 'Emissions regulations (EPA, CARB) drive electrification timelines. Battery recycling mandates and supply chain sustainability requirements (conflict minerals, EU Battery Regulation) are creating new compliance and engineering roles.'
+    },
+    'Construction & Engineering': {
+      political: 'Infrastructure spending bills, prevailing wage requirements (Davis-Bacon), and permitting reform directly affect project pipelines and workforce demand. Immigration policy affects labor availability at all skill levels. State licensing requirements vary significantly for engineering and project management roles.',
+      economic: 'Construction is highly cyclical and interest-rate sensitive. Material cost volatility (steel, lumber, concrete) affects project margins and can delay or accelerate hiring needs. Bonding capacity constraints can limit the number of projects a firm can pursue simultaneously.',
+      social: 'The skilled trades shortage is well-documented and extends into project management, estimating, and technology roles. An aging workforce and insufficient vocational training pipeline create persistent talent gaps. The industry struggles to attract diverse candidates and younger workers.',
+      technological: 'BIM, drone surveying, prefabrication, and integrated project delivery (IPD) are driving technology adoption. Construction technology (ConTech) investment is growing, creating demand for professionals who bridge field operations and digital tools.',
+      legal: 'Prevailing wage laws, OSHA regulations, contractor licensing requirements, and mechanic\'s lien statutes vary by state and affect both labor costs and workforce structure. Worker classification scrutiny is particularly intense in construction.',
+      environmental: 'Green building standards (LEED, WELL), embodied carbon requirements, and state-level building performance standards are creating new roles in sustainability and energy modeling. Environmental impact assessment and remediation requirements add compliance staffing needs.'
+    },
+    'Distribution & Logistics': {
+      political: 'Trade policy, tariff structures, and customs regulations directly affect supply chain operations and staffing needs. Hours-of-service regulations for drivers, port labor agreements, and state-level warehouse safety legislation (e.g., California AB 701) affect workforce planning.',
+      economic: 'E-commerce growth continues to drive demand for distribution capacity and talent. Fuel costs, carrier rates, and real estate costs for warehouse space affect operational margins and influence build-vs-buy workforce decisions. Last-mile delivery economics create particular pressure on labor costs.',
+      social: 'Warehouse and logistics labor markets are extremely tight, with high turnover rates and increasing worker expectations around compensation, scheduling flexibility, and working conditions. The shift to e-commerce has changed customer expectations around delivery speed, creating operational pressure.',
+      technological: 'Warehouse automation (robotics, AS/RS), transportation management systems, real-time visibility platforms, and AI-powered demand forecasting are reshaping operations. The technology skills gap in logistics is significant as the industry moves from manual to automated operations.',
+      legal: 'DOT regulations, hazmat handling requirements, and state-specific labor laws (meal breaks, scheduling predictability) affect workforce structure. Worker classification issues are prominent in last-mile delivery. Customs and trade compliance creates specialized staffing needs.',
+      environmental: 'Fleet electrification mandates, Scope 3 emissions reporting requirements, and sustainable packaging initiatives are creating new roles in environmental compliance and green logistics. Reverse logistics for returns and recycling is a growing operational function.'
+    },
+    'Education': {
+      political: 'State funding formulas, federal financial aid policy (Title IV), and accreditation requirements directly affect institutional budgets and staffing capacity. Political debate around DEI programs, curriculum content, and free speech on campus creates workforce volatility in certain administrative functions.',
+      economic: 'Demographic enrollment cliffs, tuition sensitivity, and endowment performance create budget uncertainty. Institutions compete for technology talent against private sector organizations offering 30-50% higher compensation for comparable roles. Grant funding cycles affect project-based staffing.',
+      social: 'Student expectations for digital learning experiences, mental health services, and career outcomes are driving institutional investment. Faculty governance and shared decision-making culture affect the pace of technology adoption and organizational change.',
+      technological: 'Learning management systems, student information systems, CRM platforms, and analytics tools require ongoing investment and skilled staff. AI-driven advising, adaptive learning, and cybersecurity are emerging priorities creating new talent demands.',
+      legal: 'FERPA, Title IX, ADA compliance, accreditation standards, and state authorization requirements create complex regulatory obligations. Institutional review boards (IRB) may govern data access for technology roles working with student records.',
+      environmental: 'Campus sustainability commitments, carbon neutrality pledges, and green building standards for new construction create specialized staffing needs. Students increasingly expect environmental responsibility, making sustainability a recruitment and retention factor.'
+    },
+    'Energy & Utilities': {
+      political: 'Energy policy, renewable portfolio standards, rate case proceedings, and grid reliability mandates directly drive workforce planning. Federal incentives (IRA, ITC, PTC) for clean energy are accelerating the transition and creating new hiring needs. FERC and state PUC regulatory requirements affect staffing levels.',
+      economic: 'Regulated utilities operate under rate-of-return models where labor costs are passed through to ratepayers, creating different cost dynamics than competitive industries. Capital investment cycles for grid modernization drive project-based staffing needs. Commodity price volatility affects unregulated generation and trading operations.',
+      social: 'The utility workforce is among the oldest in any industry, with a wave of retirements creating critical knowledge transfer challenges. Energy justice and equity considerations are increasingly factored into workforce planning and community engagement. Public expectations around reliability and storm response affect staffing levels.',
+      technological: 'Grid modernization, distributed energy resources (DER), advanced metering infrastructure (AMI), and SCADA/OT cybersecurity are driving technology transformation. The convergence of IT and OT requires new skill profiles that bridge traditional utility operations with modern technology platforms.',
+      legal: 'NERC CIP reliability standards, state PUC regulations, environmental permits, and pipeline safety requirements (PHMSA) create extensive compliance obligations. Labor agreements with IBEW and other unions affect workforce flexibility. OSHA and state safety regulations are particularly stringent.',
+      environmental: 'Decarbonization commitments, coal plant retirements, renewable integration, and electrification of buildings and transportation are fundamentally reshaping the utility workforce. Environmental remediation obligations (coal ash, PCBs) and emissions reporting requirements create ongoing compliance needs.'
+    },
+    'Financial Services': {
+      political: 'Regulatory priorities shift with administrations, affecting compliance staffing needs. Dodd-Frank implementation, CFPB enforcement posture, and state-level financial regulation (e.g., NY DFS) create varying compliance requirements. Sanctions policy and AML enforcement priorities drive specialized hiring.',
+      economic: 'Interest rate environment affects profitability across banking, insurance, and asset management, which in turn drives hiring and technology investment budgets. Fintech competition is compressing margins in traditional banking services and forcing technology modernization. M&A activity creates integration staffing needs.',
+      social: 'Consumer expectations for digital banking, mobile-first experiences, and personalized financial advice are driving technology investment. Financial inclusion and ESG investing mandates are creating new role requirements. The industry faces reputation challenges that affect talent attraction, particularly among younger candidates.',
+      technological: 'Cloud migration, AI/ML for risk modeling and fraud detection, real-time payment systems, and open banking APIs are driving technology transformation. Cybersecurity is a board-level priority creating persistent demand for security professionals. RegTech adoption is accelerating.',
+      legal: 'SOX, BSA/AML, GLBA, Reg SP, and state privacy laws create extensive compliance obligations. FINRA/SEC registration requirements and OCC heightened standards affect workforce structure. Third-party risk management frameworks govern contractor usage. State-level fiduciary and licensing requirements vary significantly.',
+      environmental: 'ESG reporting requirements, climate risk disclosure rules (SEC), and sustainable finance commitments are creating new roles in ESG analysis, climate risk modeling, and sustainability reporting. Green bond and sustainable lending programs require specialized expertise.'
+    },
+    'Food & Beverage': {
+      political: 'FDA and USDA regulatory changes, labeling requirements, and food safety legislation directly affect compliance staffing. Trade policy and tariffs on agricultural imports affect supply chain costs. State-level regulations on packaging, additives, and labeling create varying compliance needs.',
+      economic: 'Consumer spending on food is relatively stable but shifts between foodservice and retail channels affect producer strategies. Input cost volatility (ingredients, packaging, energy) creates margin pressure that influences build-vs-buy workforce decisions. Private label growth is intensifying competition.',
+      social: 'Consumer preferences for clean label, organic, plant-based, and sustainably sourced products are driving reformulation and supply chain changes. Health and wellness trends create new product development needs. Social media amplification of food safety incidents increases reputational risk and response staffing needs.',
+      technological: 'Traceability systems, predictive quality analytics, automated production lines, and ERP modernization are driving technology investment. The industry is earlier in its digital transformation than many sectors, creating opportunities for both technology adoption and talent development.',
+      legal: 'FSMA, HACCP requirements, SQF/FSSC 22000 certifications, and allergen management regulations create extensive compliance frameworks. State-level cottage food laws and labeling requirements vary. Product liability and recall management require dedicated resources.',
+      environmental: 'Sustainability commitments around water usage, food waste reduction, regenerative agriculture, and packaging recyclability are creating new roles. Scope 3 emissions reporting requirements are extending sustainability obligations into the supply chain. Consumer and retailer expectations for sustainability credentials are intensifying.'
+    },
+    'Government & Public Sector': {
+      political: 'Budget cycles, continuing resolutions, administration transitions, and legislative priorities directly affect agency staffing authority and project funding. Government shutdown risks create workforce planning uncertainty. Political appointee turnover at senior levels can shift strategic direction rapidly.',
+      economic: 'Public sector compensation is constrained by pay tables (GS scale, state equivalents) that lag private sector market rates, particularly for technology roles. However, benefits packages (pension, health, job security) partially offset the gap. Budget sequestration and fiscal austerity can freeze hiring regardless of need.',
+      social: 'Public service motivation is a meaningful recruitment lever, but competition with private sector for technology talent is intensifying. Diversity and inclusion mandates are more explicit than in many private sectors. Telework expansion during the pandemic created new expectations that are being partially walked back.',
+      technological: 'Legacy system modernization (mainframe to cloud), cybersecurity (FISMA, CDM), zero trust architecture, and AI governance are driving technology demand. FedRAMP and StateRAMP compliance requirements affect which technologies can be deployed and create specialized staffing needs.',
+      legal: 'FAR, personal services contract restrictions, appropriations law, and OMB circulars govern how agencies can use contract labor. Ethics regulations, financial disclosure requirements, and revolving door provisions affect hiring flexibility. State procurement codes and competitive bidding requirements add complexity at state and local levels.',
+      environmental: 'Executive orders on sustainability, federal building energy performance standards, and fleet electrification mandates are creating new roles. Environmental justice and climate adaptation planning are expanding workforce needs at agencies like EPA, DOE, and state equivalents.'
+    },
+    'Healthcare': {
+      political: 'CMS reimbursement policy, ACA implementation, Medicaid expansion decisions, and state certificate-of-need laws directly affect healthcare organization finances and staffing capacity. Scope-of-practice legislation affects role design and workforce flexibility. Surprise billing regulations and price transparency rules create compliance staffing needs.',
+      economic: 'Healthcare organizations face persistent margin pressure from payer mix shifts, labor cost inflation, and rising supply costs. Technology investment competes with clinical staffing needs for limited capital. Value-based care transition is changing how organizations staff and measure performance.',
+      social: 'Patient expectations for digital access, telehealth, and personalized care are driving technology investment. Health equity mandates are reshaping workforce composition and community engagement. The post-pandemic workforce has elevated expectations around flexibility and burnout prevention.',
+      technological: 'EHR optimization, interoperability (FHIR/HL7), telehealth platforms, AI-assisted clinical decision support, and cybersecurity (HIPAA, HITECH) are driving persistent technology demand. Revenue cycle automation and population health analytics are creating new role requirements.',
+      legal: 'HIPAA, HITECH, CMS Conditions of Participation, Joint Commission standards, and state licensing requirements create extensive compliance obligations. BAA requirements govern all contractor access to PHI. Stark Law and Anti-Kickback Statute affect how organizations structure workforce relationships with physicians.',
+      environmental: 'Healthcare facilities are significant energy consumers, and sustainability commitments are driving investment in green building, waste reduction, and supply chain sustainability. Pharmaceutical waste management and medical device sterilization create specialized environmental compliance needs.'
+    },
+    'Manufacturing': {
+      political: 'Trade policy, tariffs, reshoring incentives (CHIPS Act, IRA), and state economic development programs directly affect manufacturing workforce needs. OSHA enforcement priorities and state safety regulations affect compliance staffing. Immigration policy affects labor availability at production and engineering levels.',
+      economic: 'Manufacturing is cyclical and sensitive to interest rates, housing starts, and industrial production indices. Raw material cost volatility affects margins and can accelerate or delay technology investment. Reshoring trends are creating new facility startups requiring rapid workforce buildout.',
+      social: 'The manufacturing workforce is aging, with over 25% of workers eligible to retire within the next decade. Attracting younger workers requires modernizing the perception of manufacturing careers. Skills gap between traditional manufacturing and Industry 4.0 requirements is widening.',
+      technological: 'Industry 4.0 (IoT, digital twins, predictive maintenance), ERP modernization, MES deployment, and robotics/automation are driving technology demand. The convergence of OT and IT requires new skill profiles. Additive manufacturing and advanced materials are creating specialized roles.',
+      legal: 'OSHA regulations, EPA environmental permits, state worker compensation requirements, and product liability considerations affect workforce structure. Union collective bargaining agreements may restrict contractor usage. Export control regulations (EAR) affect who can access certain technical data.',
+      environmental: 'Emissions regulations, waste reduction mandates, and circular economy initiatives are creating new roles in environmental compliance and sustainable manufacturing. Energy efficiency requirements and carbon reporting obligations are growing. ESG reporting expectations from customers and investors are intensifying.'
+    },
+    'Nonprofit': {
+      political: 'Tax policy affecting charitable deductions, government grant programs, and advocacy restrictions (lobbying limits for 501(c)(3) organizations) directly affect nonprofit funding and staffing capacity. Political shifts can redirect government funding priorities, creating workforce volatility for grant-dependent organizations.',
+      economic: 'Nonprofit funding is inherently uncertain, with revenue dependent on donor generosity, grant cycles, and government appropriations. Economic downturns simultaneously increase demand for services and reduce philanthropic giving. The sector typically offers 20-30% below market compensation for technology and administrative roles.',
+      social: 'Mission alignment is the primary recruitment advantage for nonprofits, but it cannot fully compensate for below-market pay, particularly for technology roles. Board governance dynamics, volunteer management, and stakeholder engagement create unique organizational complexity. Burnout rates are high across the sector.',
+      technological: 'CRM systems (Salesforce NPSP, Bloomerang), grant management platforms, outcome measurement tools, and digital fundraising are driving technology needs. Most nonprofits are under-resourced for technology, creating accumulated technical debt that compounds over time.',
+      legal: 'IRS Form 990 reporting requirements, state charitable registration, donor restricted fund accounting, and grant compliance obligations create administrative complexity. Unrelated business income rules may affect certain technology ventures. Lobbying and political activity restrictions affect advocacy-related staffing.',
+      environmental: 'Many nonprofits have sustainability as part of their mission, and those that do not still face growing expectations from donors and stakeholders for environmental responsibility. Grant funders increasingly require environmental impact reporting. Carbon offset and sustainability program management create specialized roles for environmental organizations.'
+    },
+    'Pharma & Life Sciences': {
+      political: 'FDA regulatory policy, drug pricing legislation, patent law reform, and biosimilar approval pathways directly affect pharmaceutical business models and workforce needs. State-level pharmacy benefit manager regulations and drug pricing transparency laws create varying compliance requirements.',
+      economic: 'The pharmaceutical industry operates with long development timelines (10-15 years) and high R&D investment, making workforce planning inherently long-range. Patent cliff dynamics drive urgency around pipeline development. Pricing pressure from government negotiation (IRA) is compressing margins and forcing operational efficiency.',
+      social: 'Public trust in pharmaceutical companies affects talent attraction and retention. Clinical trial diversity requirements are reshaping how trials are designed and staffed. Patient advocacy groups and real-world evidence expectations are creating new engagement models requiring specialized talent.',
+      technological: 'AI-driven drug discovery, real-world evidence platforms, decentralized clinical trials, and digital therapeutics are transforming the industry. Data integrity and computer system validation (CSV) requirements add compliance overhead to every technology decision. Pharmacovigilance automation is an emerging priority.',
+      legal: '21 CFR Part 11, GxP validation requirements, ICH guidelines, HIPAA, and state pharmacy regulations create extensive compliance frameworks. Patent prosecution and Paragraph IV litigation require specialized legal talent. Transparency reporting (Sunshine Act) and anti-kickback compliance affect commercial operations staffing.',
+      environmental: 'Green chemistry initiatives, pharmaceutical waste management, and API manufacturing emissions regulations create specialized environmental roles. Supply chain sustainability and cold chain logistics for biologics have environmental implications. ESG reporting expectations from investors are intensifying.'
+    },
+    'Professional Services': {
+      political: 'Government contracting rules affect consulting firms serving public sector clients. State-level regulations around professional licensing (CPA, law, engineering) affect workforce mobility. Data privacy legislation (CCPA, state laws) creates compliance consulting demand while also affecting how firms manage their own workforce data.',
+      economic: 'Professional services revenue is directly tied to billable utilization, making workforce planning a core financial discipline. Economic uncertainty drives demand for advisory services but can compress project budgets. The shift to outcome-based pricing from time-and-materials is changing how firms staff engagements.',
+      social: 'Work-life balance expectations, particularly among younger professionals, are challenging the traditional professional services model of high utilization and extensive travel. Diversity and inclusion have become client selection criteria in many RFP processes. Remote work has expanded the talent pool but increased competition for top performers.',
+      technological: 'AI-assisted advisory, data analytics, automation of routine deliverables, and knowledge management platforms are transforming service delivery. Firms need talent that can combine domain expertise with technology skills to deliver digital-first consulting engagements.',
+      legal: 'Professional liability insurance requirements, conflict of interest policies, and client confidentiality obligations affect workforce structure. Non-compete and non-solicitation provisions are critical but face increasing legal scrutiny. State-level professional licensing requirements affect staff deployment across jurisdictions.',
+      environmental: 'ESG consulting and sustainability advisory are among the fastest-growing practice areas. Firms face growing expectations from clients and employees for environmental responsibility. Carbon footprint reduction, particularly around travel, is becoming a competitive differentiator.'
+    },
+    'Real Estate': {
+      political: 'Zoning regulations, rent control legislation, property tax policy, and housing affordability mandates directly affect real estate operations and staffing needs. Opportunity Zone incentives, LIHTC programs, and state-level housing policy create specialized compliance requirements.',
+      economic: 'Real estate is highly sensitive to interest rates, cap rates, and credit availability. Remote work trends are reshaping office demand while industrial and multifamily sectors see relative strength. Property valuations and transaction volumes directly drive staffing needs for acquisitions, asset management, and disposition teams.',
+      social: 'Tenant expectations for digital amenities, responsive property management, and community-oriented spaces are driving investment in property technology. ESG and sustainability expectations from institutional investors are becoming table stakes. Urbanization trends, demographic shifts, and remote work preferences are reshaping demand across property types.',
+      technological: 'Property management systems, building automation (BAS), tenant experience platforms, portfolio analytics, and smart building technologies are driving technology adoption. The industry has historically underinvested in technology, creating both accumulated technical debt and greenfield opportunity.',
+      legal: 'Fair housing requirements, lease accounting standards (ASC 842), state landlord-tenant laws, and ADA compliance create ongoing regulatory obligations. REIT tax qualification requirements affect organizational structure and staffing. Environmental site assessment and remediation liability affect acquisition and disposition processes.',
+      environmental: 'Building energy performance standards, carbon disclosure requirements, green building certifications (LEED, ENERGY STAR), and climate risk assessment are creating new roles. ESG reporting for institutional investors requires dedicated sustainability and reporting talent. Electrification mandates for heating and cooling systems are driving capital planning and technical staffing needs.'
+    },
+    'Retail & E-commerce': {
+      political: 'Sales tax nexus rules, data privacy legislation (CCPA, state laws), minimum wage increases, and scheduling predictability laws directly affect retail operations and labor costs. Trade policy and tariffs affect product costs and sourcing strategies.',
+      economic: 'Retail is highly sensitive to consumer confidence, disposable income, and seasonal spending patterns. E-commerce growth continues to shift economics from stores to fulfillment. Margin compression from marketplace competition and promotional intensity affects technology investment capacity.',
+      social: 'Consumer expectations for omnichannel experience, same-day delivery, personalization, and social commerce are driving technology investment. Retail workers increasingly expect scheduling flexibility, competitive wages, and career development opportunities. Social media amplification of customer service failures increases reputational risk.',
+      technological: 'Unified commerce platforms, AI-powered personalization, inventory optimization, mobile POS, and customer data platforms are driving technology demand. PCI-DSS compliance and cybersecurity requirements create baseline staffing needs. Headless commerce architecture and composable technology stacks are reshaping platform teams.',
+      legal: 'PCI-DSS compliance, state consumer protection laws, ADA web accessibility requirements, and evolving data privacy regulations create ongoing compliance obligations. Product safety and recall management require dedicated resources. State-level labor laws around scheduling, breaks, and overtime vary significantly.',
+      environmental: 'Sustainable packaging mandates, supply chain transparency requirements, and consumer expectations for environmental responsibility are creating new roles. Scope 3 emissions reporting, textile waste regulations, and circular economy initiatives are particularly relevant for fashion and consumer goods retailers.'
+    },
+    'Technology': {
+      political: 'Data privacy regulation (GDPR, CCPA, state laws), AI regulation, antitrust enforcement, and export controls on semiconductor and AI technology directly affect technology companies. Section 230 and content moderation policy create regulatory uncertainty for platform companies. Immigration policy (H-1B) significantly affects the technology talent pool.',
+      economic: 'Technology sector valuations and funding availability drive hiring velocity. Interest rate environment affects growth equity and venture funding, which in turn drives startup hiring. The sector is experiencing a correction from pandemic-era over-hiring, but demand for AI, cybersecurity, and infrastructure talent remains strong.',
+      social: 'Remote and hybrid work expectations are deeply embedded in technology culture and are non-negotiable for many candidates. Diversity and inclusion efforts face scrutiny from multiple directions. Developer experience, tooling quality, and engineering culture are significant factors in talent attraction and retention.',
+      technological: 'AI/ML, cloud-native architecture, cybersecurity, platform engineering, and developer productivity are the primary technology vectors driving talent demand. The pace of technology change creates continuous skill obsolescence risk, making learning culture and technical growth opportunities critical retention factors.',
+      legal: 'IP ownership, patent prosecution, open source licensing, non-compete enforceability (varies by state), and data privacy compliance create complex legal obligations. California\'s prohibition on non-competes significantly affects workforce mobility. AI governance and algorithmic accountability regulations are emerging.',
+      environmental: 'Data center energy consumption, Scope 2 emissions, and e-waste management are the primary environmental considerations. Carbon neutrality commitments and renewable energy procurement are becoming competitive differentiators. Sustainable software engineering practices are an emerging discipline.'
+    },
+  };
+
+  const defaultPestle = {
+    political: 'Regulatory and policy developments at federal and state levels can affect workforce planning through changes in labor law, tax policy, industry-specific regulations, and government spending priorities. Monitor legislative developments that could affect employment costs, contractor classification rules, or industry-specific compliance requirements in '+stateClean+'.',
+    economic: 'Macroeconomic conditions including interest rates, inflation, and labor market tightness directly affect both compensation levels and talent availability for '+roleName+' roles. Economic uncertainty may favor the flexibility of contracting, while stability tends to favor the investment in permanent hiring.',
+    social: 'Workforce expectations around remote work, flexibility, compensation transparency, and career development continue to evolve. These expectations affect both the ability to attract candidates and the retention risk for either employment model. Understanding what '+roleName+' candidates prioritize beyond compensation is critical.',
+    technological: 'Technology adoption trends in your industry are reshaping the skills profile required for '+roleName+' roles. Evaluate whether emerging technologies will change the scope of this role within the engagement period, and ensure the selected candidate has the adaptability to evolve with changing requirements.',
+    legal: 'Worker classification rules, non-compete enforceability, and state-specific labor regulations in '+stateClean+' affect both employment models. Ensure contractor arrangements comply with applicable federal and state classification tests, and review IP assignment and confidentiality provisions for any non-employee engagement.',
+    environmental: 'Sustainability and ESG considerations are increasingly influencing workforce decisions across industries. If your organization has environmental commitments, consider how this role contributes to or is affected by sustainability goals, reporting requirements, and stakeholder expectations.'
+  };
+
+  const pestle = pestleData[ind] || defaultPestle;
+
+  // ── INDUSTRY CONTEXT (PESTLE) ──
+  let industryContext = 'INDUSTRY CONTEXT \u2014 EXTERNAL ENVIRONMENT (PESTLE)\n';
   industryContext += ins.context+'\n\n';
-  if (ind) {
-    industryContext += 'For '+ind+' organizations evaluating a '+roleName+' role, the decision should be informed by both the financial analysis above and sector-specific dynamics affecting talent availability, compliance requirements, and long-term workforce planning. The choice between direct hire and contractor reflects how the organization manages compliance, intellectual property, institutional knowledge, and workforce continuity in a sector where these factors carry meaningful weight.';
-  } else {
-    industryContext += 'The decision framework should focus on the financial comparison, expected engagement duration, and tolerance for flexibility versus stability. The financial analysis provides one dimension, but operational factors like speed-to-start, knowledge transfer risk, and long-term planning should also inform the decision.';
-  }
+  industryContext += 'Political and Regulatory: '+pestle.political+'\n\n';
+  industryContext += 'Economic Factors: '+pestle.economic+'\n\n';
+  industryContext += 'Social and Workforce Trends: '+pestle.social+'\n\n';
+  industryContext += 'Technological Drivers: '+pestle.technological+'\n\n';
+  industryContext += 'Legal Considerations: '+pestle.legal+'\n\n';
+  industryContext += 'Environmental Factors: '+pestle.environmental;
 
   // ── RISKS ──
   let risks = 'POTENTIAL RISKS TO CONSIDER\n';
@@ -2915,11 +3067,23 @@ function fetchNarrative(s) {
     : 'If the scope shrinks or the engagement ends early, the direct-hire one-time costs of $'+Math.round(s.recruitAmt+s.rampCost).toLocaleString()+' may not fully amortize, tipping economics toward contracting. Consider whether a probationary period, contract-to-hire structure, or phased commitment could mitigate this risk.';
   risks += longTerm ? '\n\nFor a '+s.months+'-month engagement, contractor retention is a real and often underestimated risk. High-performing contractors receive competing offers regularly, and mid-engagement turnover can be more disruptive than permanent hire resignation because contractor transitions typically involve less notice and no institutional handoff. Consider whether renewal terms, rate escalation provisions, or a conversion clause should be negotiated upfront.' : '';
 
-  // ── RESEARCH ──
-  let research = 'AREAS TO RESEARCH FURTHER\n';
+  // ── RESEARCH (Internal Analysis + External Analysis) ──
+  let research = 'STRATEGIC ASSESSMENT FRAMEWORK\n';
+
+  // Internal Analysis
+  research += 'Internal Analysis:\n\n';
+  research += 'Pay Equity and Compensation Structure: Before making a hiring decision, evaluate how the proposed salary of $'+s.salary.toLocaleString()+' for '+roleName+' aligns with your existing internal pay structure. If current employees in comparable roles earn significantly more or less, this hire could create internal equity issues that affect morale, retention, and potential legal exposure. Review your compensation bands, recent merit increase history, and any pay equity audit findings to ensure this offer is internally consistent.\n\n';
+  research += 'Historical Hiring Practices: Examine your organization\'s track record with both direct hires and contractors for similar roles. What has your average time-to-fill been for comparable positions? What is your first-year turnover rate for direct hires versus contractor non-renewal rate? If previous '+roleName+' hires have consistently left within 12-18 months, the contractor model may better match your actual retention pattern regardless of cost modeling. Conversely, if contractors have consistently been converted to permanent roles, a direct hire may be more efficient.\n\n';
+  research += 'Skills Evaluation and Gap Assessment: Assess whether the skills required for this '+roleName+' role exist within your current organization at any level. If internal candidates could be developed or upskilled to fill this role within a reasonable timeframe, the cost of a contractor engagement could instead fund an internal development program with lasting organizational benefit. Document the specific technical and domain skills required, distinguish between must-have and nice-to-have qualifications, and evaluate whether your current team has adjacent capabilities that could be leveraged.\n\n';
+  research += 'Succession and Progression Planning: Consider where this role fits within your organizational talent pipeline. If this is a critical function, how will knowledge be retained and transferred regardless of whether you hire directly or contract? For direct hires, define the career progression path and ensure it is competitive enough to support retention. For contractors, establish knowledge transfer protocols and documentation requirements from day one to protect against institutional knowledge loss when the engagement ends.\n\n';
+
+  // External Analysis (PESTLE summary)
+  research += 'External Analysis (PESTLE Framework):\n\n';
+  research += 'The external environment analysis above identifies six categories of factors that should inform your hiring decision. As next steps, we recommend the following research agenda tailored to your specific situation:\n\n';
   research += ins.research+'\n\n';
-  research += 'Compare the proposed bill rate of $'+s.rate+'/hr against current market data for comparable '+roleName+' roles in '+stateClean+' to ensure competitive pricing. ';
-  research += highSalary ? 'At this salary level, explore whether a contract-to-hire arrangement could preserve flexibility while building toward permanent employment. Retained search or executive placement firms may also yield a stronger candidate pool. Review existing vendor partnerships for negotiated rates or volume discounts.' : 'Discuss with your finance team whether the '+s.months+'-month engagement fits within the current budget cycle or if phased commitments would be more practical. Review existing vendor agreements or preferred staffing partnerships for favorable rates or pre-vetted talent pools.';
+  research += 'Compare the proposed bill rate of $'+s.rate+'/hr against current market data for comparable '+roleName+' roles in '+stateClean+' using job boards (LinkedIn, Indeed, Glassdoor), industry compensation surveys'+(ind ? ' specific to '+ind : '')+', and staffing agency rate cards. ';
+  research += highSalary ? 'At the $'+s.salary.toLocaleString()+' level, explore whether a contract-to-hire arrangement could preserve flexibility while building toward permanent employment. Retained search or executive placement firms may yield a stronger candidate pool. Review existing vendor partnerships for negotiated rates or volume discounts.' : 'Discuss with your finance team whether the '+s.months+'-month engagement fits within the current budget cycle or if phased commitments would be practical. Review existing vendor agreements or preferred staffing partnerships for favorable rates or pre-vetted talent pools.';
+  research += '\n\nFinally, synthesize the internal and external analyses to determine which employment model best aligns with your organization\'s strategic workforce plan. The financial comparison provides the quantitative foundation, but the qualitative factors identified in this assessment, including pay equity impact, succession risk, talent market conditions, and regulatory environment, should carry equal weight in the final decision.';
 
   return compBenchmark+'\n\n'+directProsCons+'\n\n'+contractorProsCons+'\n\n'+industryContext+'\n\n'+risks+'\n\n'+research;
 }
@@ -2939,9 +3103,9 @@ function buildPDF(s, narrative, w) {
     {key:'COMPENSATION BENCHMARK', color:'#2d7a4f'},
     {key:'DIRECT HIRE \u2014 PROS AND CONS', color:'#8c8c8c'},
     {key:'CONTRACTOR \u2014 PROS AND CONS', color:'#2C5E79'},
-    {key:'INDUSTRY CONTEXT', color:'#5b4a8a'},
+    {key:'INDUSTRY CONTEXT \u2014 EXTERNAL ENVIRONMENT (PESTLE)', color:'#5b4a8a'},
     {key:'POTENTIAL RISKS TO CONSIDER', color:'#b45014'},
-    {key:'AREAS TO RESEARCH FURTHER', color:'#2C5E79'},
+    {key:'STRATEGIC ASSESSMENT FRAMEWORK', color:'#231F20'},
   ];
   let sectionHTML = '';
   sectionDefs.forEach((sec,idx) => {
@@ -2950,9 +3114,18 @@ function buildPDF(s, narrative, w) {
     if (start === -1) return;
     const end = nextKey ? narrative.indexOf(nextKey) : narrative.length;
     const body = narrative.slice(start+sec.key.length, end!==-1?end:undefined).trim();
-    // Split into paragraphs on double newlines
     const paragraphs = body.split(/\n\n+/).filter(p => p.trim());
-    const parasHTML = paragraphs.map(p => '<p style="font-size:10.5px;color:#333;line-height:1.7;margin:8px 0 0 0;">'+p.trim()+'</p>').join('');
+    const parasHTML = paragraphs.map(p => {
+      const t = p.trim();
+      // Check for sub-headers like "Political and Regulatory: ..." or "Internal Analysis:"
+      const subMatch = t.match(/^([A-Z][A-Za-z &,\/\-]+(?:\([A-Z]+\))?):[\s\n]/);
+      if (subMatch) {
+        const label = subMatch[1];
+        const rest = t.slice(subMatch[0].length).trim();
+        return '<p style="font-size:10.5px;color:#333;line-height:1.7;margin:12px 0 0 0;"><strong style="color:#231F20;">'+label+':</strong> '+rest+'</p>';
+      }
+      return '<p style="font-size:10.5px;color:#333;line-height:1.7;margin:8px 0 0 0;">'+t+'</p>';
+    }).join('');
     sectionHTML += '<div style="background:'+sec.color+';color:#fff;padding:6px 14px;border-radius:4px;font-size:10px;font-weight:700;letter-spacing:0.08em;margin-top:18px;">'+sec.key+'</div>'+parasHTML;
   });
 
