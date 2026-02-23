@@ -3110,8 +3110,7 @@ function fetchNarrative(s) {
   research += 'Succession and Progression Planning: Consider where this role fits within your organizational talent pipeline. If this is a critical function, how will knowledge be retained and transferred regardless of whether you hire directly or contract? For direct hires, define the career progression path and ensure it is competitive enough to support retention. For contractors, establish knowledge transfer protocols and documentation requirements from day one to protect against institutional knowledge loss when the engagement ends.\n\n';
 
   // Market Research and Next Steps
-  research += 'Market Research and Next Steps:\n\n';
-  research += 'Before making a final decision, take time to evaluate the following internal factors that will shape the success of either hiring model:\n\n';
+  research += 'Market Research and Next Steps: Before making a final decision, take time to evaluate the following internal factors that will shape the success of either hiring model.\n\n';
   research += '\u2022 How does the proposed salary of $'+s.salary.toLocaleString()+' compare to what you are currently paying employees in similar or adjacent roles? Would this hire create pay equity concerns that could affect morale or retention among your existing team?\n\n';
   research += '\u2022 What has your organization\'s retention history looked like for '+roleName+' roles or similar positions? If direct hires in this function have historically turned over within 12-18 months, a contractor model may better reflect your actual workforce pattern.\n\n';
   research += '\u2022 Are there internal candidates who could be developed or upskilled into this role within a reasonable timeframe? If so, a contractor engagement could serve as a bridge while you invest in building that capability from within.\n\n';
@@ -3308,8 +3307,6 @@ function buildReportURL(snap) {
   const json = JSON.stringify(data);
   const encoded = btoa(unescape(encodeURIComponent(json)));
   return 'https://mikestobbe3-sys.github.io/Workforce-Planner/workforce_cost_planner.html?report=' + encodeURIComponent(encoded);
-}
-
 }
 
 // Close modal on Escape key
