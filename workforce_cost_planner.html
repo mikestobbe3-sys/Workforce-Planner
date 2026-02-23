@@ -3197,9 +3197,9 @@ async function submitToHubSpot(data) {
 
   const fields = [
     { name: 'email', value: data.email },
+    { name: 'firstname', value: data.firstName || '' },
+    { name: 'lastname', value: data.lastName || '' },
   ];
-  if (data.firstName) fields.push({ name: 'firstname', value: data.firstName });
-  if (data.lastName) fields.push({ name: 'lastname', value: data.lastName });
   if (data.company) fields.push({ name: 'company', value: data.company });
   if (data.industry) fields.push({ name: 'industry', value: data.industry });
   if (data.summary) fields.push({ name: 'message', value: data.summary });
@@ -3226,6 +3226,7 @@ async function submitToHubSpot(data) {
     if (!resp.ok) {
       const errBody = await resp.text();
       console.error('HubSpot error ' + resp.status + ':', errBody);
+      console.error('Fields sent:', JSON.stringify(fields.map(f => f.name)));
       return false;
     }
     console.log('HubSpot submission succeeded via fetch');
@@ -3336,7 +3337,10 @@ async function submitEmailCapture() {
     summary: buildCalculatorSummary(),
     reportURL: reportURL
   };
-  submitToHubSpot(hubData);
+  submitToHubSpot(hubData).then(ok => {
+    if (ok) console.log('✅ HubSpot submission successful');
+    else console.error('❌ HubSpot submission failed — check form field mapping');
+  });
 
   // Generate the PDF report into the already-opened window
   try {
