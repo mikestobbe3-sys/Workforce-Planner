@@ -1531,8 +1531,7 @@
   </div>
 </div>
 
-<!-- HubSpot Form Script (loaded async) -->
-<script charset="utf-8" type="text/javascript" src="https://js.hsforms.net/forms/embed/v2.js" async></script>
+
 
 <footer class="ftr">
   Main Line Talent Group &nbsp;·&nbsp; This tool is a cost analysis aid only — not a replacement for dialogue with HR, finance, and business stakeholders. All hiring decisions should align with your organization's business and HR strategy. &nbsp;·&nbsp; Cost estimates based on 2025 national benchmarks. Not financial or legal advice.
@@ -2653,8 +2652,15 @@ function validateContext(showMessage) {
 }
 
 // ── REPORT VIA EMAIL (Embedded HubSpot Form) ──
-let _hsFormReady = false;
-let _reportWindow = null;
+function loadHsScript(callback) {
+  if (typeof hbspt !== 'undefined' && hbspt.forms) { callback(); return; }
+  var s = document.createElement('script');
+  s.src = 'https://js.hsforms.net/forms/embed/v2.js';
+  s.charset = 'utf-8';
+  s.onload = function() { callback(); };
+  s.onerror = function() { callback('failed'); };
+  document.head.appendChild(s);
+}
 
 function generateReport() {
   if (!validateContext(true)) {
@@ -2662,81 +2668,45 @@ function generateReport() {
     return;
   }
 
-  // Pre-open window immediately to avoid popup blocker
-  _reportWindow = window.open('', '_blank');
-  if (_reportWindow) {
-    _reportWindow.document.write('<html><head><title>Generating Report...</title></head><body style="font-family:Segoe UI,sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;background:#f5f3f0;"><div style="text-align:center;"><div style="font-size:28px;margin-bottom:16px;">📊</div><div style="font-size:16px;font-weight:700;color:#231F20;">Generating Your Report</div><div style="font-size:13px;color:#888;margin-top:8px;">Please complete the form to receive your analysis...</div></div></body></html>');
-  }
+  var reportURL = buildReportURL(_snap);
+  var summary = buildCalculatorSummary();
 
   $('emailModal').classList.add('open');
+  var container = $('hsFormContainer');
+  container.innerHTML = '<p style="font-size:0.85em;color:#666;text-align:center;padding:20px;">Loading form...</p>';
 
-  // Build hidden field values
-  const reportURL = buildReportURL(_snap);
-  const summary = buildCalculatorSummary();
-
-  // Embed HubSpot form
-  const container = $('hsFormContainer');
-  container.innerHTML = '';
-
-  if (typeof hbspt !== 'undefined' && hbspt.forms) {
-    _createHsForm(container, reportURL, summary);
-  } else {
-    // Script may still be loading — wait and retry
-    container.innerHTML = '<p style="font-size:0.85em;color:#666;text-align:center;padding:20px;">Loading form...</p>';
-    let attempts = 0;
-    const checkInterval = setInterval(function() {
-      attempts++;
-      if (typeof hbspt !== 'undefined' && hbspt.forms) {
-        clearInterval(checkInterval);
-        _createHsForm(container, reportURL, summary);
-      } else if (attempts > 20) {
-        clearInterval(checkInterval);
-        container.innerHTML = '<p style="color:var(--red);font-size:0.85em;">Could not load form. Please refresh the page and try again, or contact <a href="mailto:support@mainlinetalent.com">support@mainlinetalent.com</a>.</p>';
-        if (_reportWindow) _reportWindow.close();
-      }
-    }, 500);
-  }
-}
-
-function _createHsForm(container, reportURL, summary) {
-  container.innerHTML = '';
-  hbspt.forms.create({
+  loadHsScript(function(err) {
+    if (err || typeof hbspt === 'undefined') {
+      container.innerHTML = '<p style="color:var(--red);font-size:0.85em;padding:20px;">Could not load form. Please refresh and try again, or contact <a href="mailto:support@mainlinetalent.com">support@mainlinetalent.com</a>.</p>';
+      return;
+    }
+    container.innerHTML = '';
+    hbspt.forms.create({
       region: 'na1',
       portalId: '47653730',
       formId: 'a9ea9419-e2c0-49c7-a217-c236c350750c',
       target: '#hsFormContainer',
       onFormReady: function(form) {
-        _hsFormReady = true;
-        // Pre-fill hidden fields
-        const msgField = form.querySelector('input[name="message"], textarea[name="message"]');
-        if (msgField) { msgField.value = summary; }
-        const wpField = form.querySelector('input[name="workforce_planning"]');
-        if (wpField) { wpField.value = reportURL; }
-        const indField = form.querySelector('select[name="industry"], input[name="industry"]');
-        if (indField) { indField.value = $('projectIndustry').value; }
-      },
-      onFormSubmit: function(form) {
-        // Form is about to submit — capture email for console
-        const emailInput = form.querySelector('input[name="email"]');
-        console.log('✅ HubSpot form submitting for:', emailInput ? emailInput.value : 'unknown');
+        var msgField = form.querySelector('input[name="message"], textarea[name="message"]');
+        if (msgField) msgField.value = summary;
+        var wpField = form.querySelector('input[name="workforce_planning"]');
+        if (wpField) wpField.value = reportURL;
+        var indField = form.querySelector('select[name="industry"], input[name="industry"]');
+        if (indField) indField.value = $('projectIndustry').value;
       },
       onFormSubmitted: function() {
-        console.log('✅ HubSpot form submitted successfully');
-
-        // Generate the report
+        console.log('✅ HubSpot form submitted');
+        closeEmailModal();
         try {
-          const narrative = fetchNarrative(_snap);
-          buildPDF(_snap, narrative, _reportWindow);
+          var narrative = fetchNarrative(_snap);
+          buildPDF(_snap, narrative, window.open('', '_blank'));
         } catch (e) {
-          console.error('Report generation error:', e);
-          if (_reportWindow) _reportWindow.close();
-          alert('Could not generate report: ' + e.message);
+          console.error('Report error:', e);
+          alert('Could not generate report. Please disable your popup blocker and try again.');
         }
-
-        // Close modal after brief delay to show HubSpot's thank you
-        setTimeout(closeEmailModal, 1500);
       }
     });
+  });
 }
 
 function closeEmailModal() {
