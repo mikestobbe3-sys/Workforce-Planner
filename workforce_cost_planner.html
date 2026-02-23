@@ -3077,14 +3077,12 @@ function fetchNarrative(s) {
   research += 'Skills Evaluation and Gap Assessment: Assess whether the skills required for this '+roleName+' role exist within your current organization at any level. If internal candidates could be developed or upskilled to fill this role within a reasonable timeframe, the cost of a contractor engagement could instead fund an internal development program with lasting organizational benefit. Document the specific technical and domain skills required, distinguish between must-have and nice-to-have qualifications, and evaluate whether your current team has adjacent capabilities that could be leveraged.\n\n';
   research += 'Succession and Progression Planning: Consider where this role fits within your organizational talent pipeline. If this is a critical function, how will knowledge be retained and transferred regardless of whether you hire directly or contract? For direct hires, define the career progression path and ensure it is competitive enough to support retention. For contractors, establish knowledge transfer protocols and documentation requirements from day one to protect against institutional knowledge loss when the engagement ends.\n\n';
 
-  // External Analysis (PESTLE summary)
-  research += 'External Analysis (PESTLE Framework):\n\n';
-  research += 'The external environment analysis above identifies six categories of factors that should inform your hiring decision. As next steps, we recommend the following research agenda tailored to your specific situation:\n\n';
+  // Market Research and Next Steps
+  research += 'Market Research and Next Steps:\n\n';
   research += ins.research+'\n\n';
   research += 'Compare the proposed bill rate of $'+s.rate+'/hr against current market data for comparable '+roleName+' roles in '+stateClean+' using job boards (LinkedIn, Indeed, Glassdoor), industry compensation surveys'+(ind ? ' specific to '+ind : '')+', and staffing agency rate cards. ';
   research += highSalary ? 'At the $'+s.salary.toLocaleString()+' level, explore whether a contract-to-hire arrangement could preserve flexibility while building toward permanent employment. Retained search or executive placement firms may yield a stronger candidate pool. Review existing vendor partnerships for negotiated rates or volume discounts.' : 'Discuss with your finance team whether the '+s.months+'-month engagement fits within the current budget cycle or if phased commitments would be practical. Review existing vendor agreements or preferred staffing partnerships for favorable rates or pre-vetted talent pools.';
-  research += '\n\nFinally, synthesize the internal and external analyses to determine which employment model best aligns with your organization\'s strategic workforce plan. The financial comparison provides the quantitative foundation, but the qualitative factors identified in this assessment, including pay equity impact, succession risk, talent market conditions, and regulatory environment, should carry equal weight in the final decision.';
-  research += '\n\nHow Main Line Talent Group Can Help: The research agenda outlined above reflects the work of a strategic HRBP, and we know it can be difficult to execute alongside your day-to-day responsibilities. Main Line Talent Group partners with employers to provide the market intelligence and workforce consulting that makes these decisions easier. We offer compensation benchmarking against real market data, talent availability assessments, pay equity analysis support, and strategic workforce planning guidance. More importantly, we take the time to understand your business, your culture, and your goals so that every recommendation we make is grounded in your reality, not just the numbers. Schedule a conversation at mainlinetalent.com/scheduling and let us show you what a true workforce planning partnership looks like.';
+  research += '\n\nSynthesizing the Assessment: The internal factors above, including pay equity, historical hiring outcomes, skills gaps, and succession planning, should be weighed alongside the external market conditions, regulatory environment, and industry dynamics covered earlier in this report. The financial comparison provides the quantitative foundation, but these qualitative factors often determine whether a hiring decision succeeds or fails in practice. Organizations that invest time in this due diligence before making a commitment consistently achieve better outcomes in both cost management and talent retention.';
 
   return compBenchmark+'\n\n'+directProsCons+'\n\n'+contractorProsCons+'\n\n'+industryContext+'\n\n'+risks+'\n\n'+research;
 }
@@ -3110,9 +3108,11 @@ function buildPDF(s, narrative, w) {
   ];
   // Helper: auto-link emails and URLs in text
   function linkify(text) {
-    return text
-      .replace(/([a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,})/g, '<a href="mailto:$1" style="color:#2C5E79;text-decoration:underline;">$1</a>')
-      .replace(/(mainlinetalent\.com\/scheduling)/g, '<a href="https://www.$1" target="_blank" style="color:#2C5E79;text-decoration:underline;">$1</a>');
+    // Link emails
+    let out = text.replace(/([a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,})/g, function(m) {
+      return '<a href="mailto:'+m+'" style="color:#2C5E79;text-decoration:underline;">'+m+'</a>';
+    });
+    return out;
   }
 
   // PESTLE letter definitions
