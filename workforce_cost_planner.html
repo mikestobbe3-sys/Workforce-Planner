@@ -813,9 +813,11 @@
     inset: 0;
     background: rgba(0,0,0,0.5);
     z-index: 10000;
-    align-items: center;
+    align-items: flex-start;
     justify-content: center;
     padding: 20px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
   }
   .email-modal-overlay.open { display: flex; }
   .email-modal {
@@ -826,6 +828,15 @@
     width: 100%;
     position: relative;
     overflow: hidden;
+    margin: auto;
+  }
+  @media (max-width: 520px) {
+    .email-modal {
+      max-width: 100%;
+      border-radius: 8px;
+    }
+    .email-modal-header { padding: 18px 18px 14px; }
+    .email-modal-body { padding: 16px 18px 18px; }
   }
   .email-modal-close {
     position: absolute;
@@ -846,6 +857,29 @@
   .email-modal-header h3 { font-size: 1.1em; font-weight: 800; margin: 0 0 6px; }
   .email-modal-header p { font-size: 0.82em; color: #b4c4d2; margin: 0; line-height: 1.5; }
   .email-modal-body { padding: 22px 28px 24px; }
+  /* HubSpot embedded form overrides */
+  .email-modal-body .hs-form { max-width: 100% !important; }
+  .email-modal-body .hs-form fieldset { max-width: 100% !important; }
+  .email-modal-body .hs-form .hs-input { width: 100% !important; box-sizing: border-box; }
+  .email-modal-body .hs-form .hs-button {
+    background: var(--dark) !important; color: #fff !important;
+    border: none !important; border-radius: 6px !important;
+    padding: 12px 24px !important; font-size: 0.95em !important;
+    font-weight: 700 !important; cursor: pointer !important;
+    width: 100% !important;
+  }
+  .email-modal-body .hs-form .hs-button:hover { opacity: 0.9 !important; }
+  .email-modal-body .hs-form .hs-error-msgs { font-size: 0.8em; color: var(--red); }
+  .email-modal-body .submitted-message { font-size: 0.9em; line-height: 1.6; color: #333; padding: 8px 0; }
+  /* Report ready button shown after submit */
+  .report-ready-btn {
+    display: inline-block; background: var(--red); color: #fff;
+    padding: 14px 28px; border-radius: 6px; font-size: 1em;
+    font-weight: 700; border: none; cursor: pointer;
+    text-decoration: none; margin-top: 16px; width: 100%;
+    text-align: center; letter-spacing: 0.02em;
+  }
+  .report-ready-btn:hover { opacity: 0.9; }
   .email-modal-row { display: flex; gap: 12px; }
   .email-modal-field { margin-bottom: 14px; }
   .email-modal-field label {
@@ -2696,14 +2730,30 @@ function generateReport() {
       },
       onFormSubmitted: function() {
         console.log('✅ HubSpot form submitted');
-        closeEmailModal();
-        try {
-          var narrative = fetchNarrative(_snap);
-          buildPDF(_snap, narrative, window.open('', '_blank'));
-        } catch (e) {
-          console.error('Report error:', e);
-          alert('Could not generate report. Please disable your popup blocker and try again.');
-        }
+        // Replace form with thank-you + report button
+        var container = $('hsFormContainer');
+        container.innerHTML = '<div style="text-align:center;padding:10px 0;">'
+          + '<div style="font-size:32px;margin-bottom:12px;">✅</div>'
+          + '<h3 style="font-size:1.1em;font-weight:800;color:#231F20;margin:0 0 8px;">Thank You!</h3>'
+          + '<p style="font-size:0.9em;color:#666;line-height:1.6;margin:0 0 16px;">Your information has been received. Click below to view your personalized workforce cost analysis report.</p>'
+          + '<button class="report-ready-btn" id="viewReportBtn">View Your Report →</button>'
+          + '</div>';
+        // Update header
+        var header = document.querySelector('.email-modal-header h3');
+        if (header) header.textContent = 'Your Report Is Ready';
+        var subtext = document.querySelector('.email-modal-header p');
+        if (subtext) subtext.textContent = '';
+        // Bind the button
+        $('viewReportBtn').addEventListener('click', function() {
+          closeEmailModal();
+          try {
+            var narrative = fetchNarrative(_snap);
+            buildPDF(_snap, narrative, window.open('', '_blank'));
+          } catch (e) {
+            console.error('Report error:', e);
+            alert('Could not generate report. Please disable your popup blocker and try again.');
+          }
+        });
       }
     });
   });
@@ -2711,7 +2761,6 @@ function generateReport() {
 
 function closeEmailModal() {
   $('emailModal').classList.remove('open');
-  _hsFormReady = false;
 }
 
 function validateEmail(email) {
