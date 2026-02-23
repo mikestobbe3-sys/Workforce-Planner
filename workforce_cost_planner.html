@@ -1523,40 +1523,16 @@
     <div class="email-modal-header">
         <div class="email-modal-icon">📧</div>
         <h3>Where Should We Send Your Report?</h3>
-        <p>Enter your work email and we'll deliver a personalized cost analysis report to your inbox within minutes.</p>
+        <p>Enter your work email and we'll deliver a personalized cost analysis report.</p>
       </div>
       <div class="email-modal-body">
-        <div class="email-modal-row">
-          <div class="email-modal-field" style="flex:1;">
-            <label>First Name</label>
-            <input type="text" id="captureFirst" placeholder="First name">
-          </div>
-          <div class="email-modal-field" style="flex:1;">
-            <label>Last Name</label>
-            <input type="text" id="captureLast" placeholder="Last name">
-          </div>
-        </div>
-        <div class="email-modal-field">
-          <label>Work Email <span style="color:var(--red);">*</span></label>
-          <input type="email" id="captureEmail" placeholder="you@company.com" required>
-          <div id="emailError" style="display:none;font-size:0.78em;color:var(--red);font-weight:600;margin-top:4px;"></div>
-        </div>
-        <div class="email-modal-field">
-          <label>Company</label>
-          <input type="text" id="captureCompany" placeholder="Company name">
-        </div>
-        <div class="email-modal-consent">
-          <label><input type="checkbox" id="captureConsent" checked> I agree to receive this report and occasional workforce planning insights from Main Line Talent Group. You can unsubscribe at any time.</label>
-        </div>
-        <button class="email-modal-submit" id="emailSubmitBtn" onclick="submitEmailCapture()">
-          <span id="emailSubmitText">Generate My Report</span>
-          <div class="pdf-spinner" id="emailSpinner" style="display:none;"></div>
-        </button>
+        <div id="hsFormContainer"></div>
       </div>
-    </div>
-
   </div>
 </div>
+
+<!-- HubSpot Form Script -->
+<script charset="utf-8" type="text/javascript" src="//js.hsforms.net/forms/embed/v2.js"></script>
 
 <footer class="ftr">
   Main Line Talent Group &nbsp;·&nbsp; This tool is a cost analysis aid only — not a replacement for dialogue with HR, finance, and business stakeholders. All hiring decisions should align with your organization's business and HR strategy. &nbsp;·&nbsp; Cost estimates based on 2025 national benchmarks. Not financial or legal advice.
@@ -2676,20 +2652,76 @@ function validateContext(showMessage) {
   return missing.length === 0;
 }
 
-// ── REPORT VIA EMAIL ──
+// ── REPORT VIA EMAIL (Embedded HubSpot Form) ──
+let _hsFormReady = false;
+let _reportWindow = null;
+
 function generateReport() {
   if (!validateContext(true)) {
     $('projectIndustry').closest('.section-card').scrollIntoView({behavior:'smooth',block:'center'});
     return;
   }
+
+  // Pre-open window immediately to avoid popup blocker
+  _reportWindow = window.open('', '_blank');
+
   $('emailModal').classList.add('open');
-  setTimeout(() => $('captureEmail').focus(), 200);
+
+  // Build hidden field values
+  const reportURL = buildReportURL(_snap);
+  const summary = buildCalculatorSummary();
+
+  // Embed HubSpot form
+  const container = $('hsFormContainer');
+  container.innerHTML = '';
+
+  if (typeof hbspt !== 'undefined') {
+    hbspt.forms.create({
+      region: 'na1',
+      portalId: '47653730',
+      formId: 'a3bf14c4-ff39-4391-8d12-97919a0822da',
+      target: '#hsFormContainer',
+      onFormReady: function(form) {
+        _hsFormReady = true;
+        // Pre-fill hidden fields
+        const msgField = form.querySelector('input[name="message"], textarea[name="message"]');
+        if (msgField) { msgField.value = summary; }
+        const wpField = form.querySelector('input[name="workforce_planning"]');
+        if (wpField) { wpField.value = reportURL; }
+        const indField = form.querySelector('select[name="industry"], input[name="industry"]');
+        if (indField) { indField.value = $('projectIndustry').value; }
+      },
+      onFormSubmit: function(form) {
+        // Form is about to submit — capture email for console
+        const emailInput = form.querySelector('input[name="email"]');
+        console.log('✅ HubSpot form submitting for:', emailInput ? emailInput.value : 'unknown');
+      },
+      onFormSubmitted: function() {
+        console.log('✅ HubSpot form submitted successfully');
+
+        // Generate the report
+        try {
+          const narrative = fetchNarrative(_snap);
+          buildPDF(_snap, narrative, _reportWindow);
+        } catch (e) {
+          console.error('Report generation error:', e);
+          if (_reportWindow) _reportWindow.close();
+          alert('Could not generate report: ' + e.message);
+        }
+
+        // Close modal after brief delay to show HubSpot's thank you
+        setTimeout(closeEmailModal, 1500);
+      }
+    });
+  } else {
+    container.innerHTML = '<p style="color:var(--red);font-size:0.85em;">Could not load form. Please try again or contact support@mainlinetalent.com.</p>';
+    if (_reportWindow) _reportWindow.close();
+  }
 }
 
 function closeEmailModal() {
   $('emailModal').classList.remove('open');
-  $('emailError').style.display = 'none';
-  $('captureEmail').style.borderColor = '';
+  _hsFormReady = false;
 }
 
 function validateEmail(email) {
@@ -3090,8 +3122,6 @@ function fetchNarrative(s) {
   }
   research += 'Synthesizing the Assessment: The internal factors above should be weighed alongside the external market conditions, regulatory environment, and industry dynamics covered earlier in this report. The financial comparison provides the quantitative foundation, but these organizational realities often determine whether a hiring decision succeeds or fails in practice.';
   research += '\n\nHow Main Line Talent Group Can Help: The internal assessment above is work only your organization can do. The external research, including compensation benchmarking, talent market analysis, bill rate validation, and workforce availability, is where Main Line Talent Group adds immediate value. We do this work every day across '+(ind ? ind+' and ' : '')+'dozens of industries, and we bring that market intelligence directly to our clients. More importantly, we take the time to understand your business, your culture, and your goals so that every recommendation we make is grounded in your reality, not just the numbers. We would welcome the opportunity to learn more about your organization and show you what a true workforce planning partnership looks like.';
-  research += '\n\nSynthesizing the Assessment: The internal factors above, including pay equity, historical hiring outcomes, skills gaps, and succession planning, should be weighed alongside the external market conditions, regulatory environment, and industry dynamics covered earlier in this report. The financial comparison provides the quantitative foundation, but these qualitative factors often determine whether a hiring decision succeeds or fails in practice. Organizations that invest time in this due diligence before making a commitment consistently achieve better outcomes in both cost management and talent retention.';
-  research += '\n\nHow Main Line Talent Group Can Help: The research agenda outlined above reflects the work of a strategic HRBP, and we know it can be difficult to execute alongside your day-to-day responsibilities. Main Line Talent Group partners with employers to provide the market intelligence and workforce consulting that makes these decisions easier. We offer compensation benchmarking against real market data, talent availability assessments, pay equity analysis support, and strategic workforce planning guidance. More importantly, we take the time to understand your business, your culture, and your goals so that every recommendation we make is grounded in your reality, not just the numbers.';
 
   return compBenchmark+'\n\n'+directProsCons+'\n\n'+contractorProsCons+'\n\n'+industryContext+'\n\n'+risks+'\n\n'+research;
 }
@@ -3259,88 +3289,6 @@ function buildPDF(s, narrative, w) {
   }
 }
 
-async function submitToHubSpot(data) {
-  const PORTAL_ID = '47653730';
-  const FORM_GUID = 'a3bf14c4-ff39-4391-8d12-97919a0822da';
-
-  const fields = [
-    { name: 'email', value: data.email },
-    { name: 'firstname', value: data.firstName || '' },
-    { name: 'lastname', value: data.lastName || '' },
-  ];
-  if (data.company) fields.push({ name: 'company', value: data.company });
-  if (data.industry) fields.push({ name: 'industry', value: data.industry });
-  if (data.summary) fields.push({ name: 'message', value: data.summary });
-  if (data.reportURL) fields.push({ name: 'workforce_planning', value: data.reportURL });
-
-  const payload = {
-    fields: fields,
-    context: {
-      pageUri: window.location.href,
-      pageName: 'Workforce Cost Planner'
-    }
-  };
-
-  // Try fetch API first (works on HTTPS origins like GitHub Pages)
-  try {
-    const resp = await fetch(
-      'https://api.hsforms.com/submissions/v3/integration/submit/' + PORTAL_ID + '/' + FORM_GUID,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      }
-    );
-    if (!resp.ok) {
-      const errBody = await resp.text();
-      console.error('HubSpot error ' + resp.status + ':', errBody);
-      console.error('Fields sent:', JSON.stringify(fields.map(f => f.name)));
-      return false;
-    }
-    console.log('HubSpot submission succeeded via fetch');
-    return true;
-  } catch (fetchErr) {
-    console.warn('Fetch failed, trying iframe fallback:', fetchErr);
-  }
-
-  // Fallback: iframe form POST (for file:// or CORS-blocked origins)
-  return new Promise((resolve) => {
-    try {
-      const iframeName = 'hs_submit_' + Date.now();
-      const iframe = document.createElement('iframe');
-      iframe.name = iframeName;
-      iframe.style.display = 'none';
-      document.body.appendChild(iframe);
-
-      const form = document.createElement('form');
-      form.method = 'POST';
-      form.action = 'https://forms.hubspot.com/uploads/form/v2/' + PORTAL_ID + '/' + FORM_GUID;
-      form.target = iframeName;
-      form.style.display = 'none';
-
-      fields.forEach(f => {
-        const input = document.createElement('input');
-        input.type = 'hidden';
-        input.name = f.name;
-        input.value = f.value;
-        form.appendChild(input);
-      });
-
-      document.body.appendChild(form);
-      form.submit();
-      console.log('HubSpot submission sent via iframe fallback');
-
-      setTimeout(() => {
-        form.remove();
-        iframe.remove();
-        resolve(true);
-      }, 2000);
-    } catch (e) {
-      console.error('HubSpot iframe fallback failed:', e);
-      resolve(false);
-    }
-  });
-}
 
 function buildReportURL(snap) {
   // Package the _snap data into a compact object for the URL
@@ -3362,73 +3310,6 @@ function buildReportURL(snap) {
   return 'https://mikestobbe3-sys.github.io/Workforce-Planner/workforce_cost_planner.html?report=' + encodeURIComponent(encoded);
 }
 
-async function submitEmailCapture() {
-  const email = $('captureEmail').value.trim();
-  const errEl = $('emailError');
-
-  if (!email) {
-    errEl.textContent = 'Email is required.';
-    errEl.style.display = 'block';
-    $('captureEmail').style.borderColor = 'var(--red)';
-    return;
-  }
-  if (!validateEmail(email)) {
-    errEl.textContent = 'Please enter a valid email address.';
-    errEl.style.display = 'block';
-    $('captureEmail').style.borderColor = 'var(--red)';
-    return;
-  }
-
-  errEl.style.display = 'none';
-  $('captureEmail').style.borderColor = '';
-
-  // Open window IMMEDIATELY on user click (prevents popup blocker)
-  const reportWindow = window.open('', '_blank');
-
-  const btn = $('emailSubmitBtn');
-  const btnText = $('emailSubmitText');
-  const spinner = $('emailSpinner');
-  btn.disabled = true;
-  btnText.textContent = 'Preparing your report…';
-  spinner.style.display = 'block';
-
-  // Build the shareable report URL
-  const reportURL = buildReportURL(_snap);
-
-  // Submit to HubSpot (fire and forget)
-  const hubData = {
-    email: email,
-    firstName: $('captureFirst').value.trim(),
-    lastName: $('captureLast').value.trim(),
-    company: $('captureCompany').value.trim(),
-    industry: $('projectIndustry').value,
-    summary: buildCalculatorSummary(),
-    reportURL: reportURL
-  };
-  submitToHubSpot(hubData).then(ok => {
-    if (ok) console.log('✅ HubSpot submission successful');
-    else {
-      console.error('❌ HubSpot submission failed — check form field mapping');
-      console.error('Payload:', JSON.stringify(hubData, null, 2));
-    }
-  }).catch(err => {
-    console.error('❌ HubSpot submission error:', err);
-  });
-
-  // Generate the PDF report into the already-opened window
-  try {
-    const narrative = fetchNarrative(_snap);
-    buildPDF(_snap, narrative, reportWindow);
-  } catch (e) {
-    console.error('Report generation error:', e);
-    if (reportWindow) reportWindow.close();
-    alert('Could not generate report: ' + e.message);
-  }
-
-  btn.disabled = false;
-  btnText.textContent = 'Generate My Report';
-  spinner.style.display = 'none';
-  closeEmailModal();
 }
 
 // Close modal on Escape key
