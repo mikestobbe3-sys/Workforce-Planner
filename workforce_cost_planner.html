@@ -2718,68 +2718,176 @@ function buildCalculatorSummary() {
   return lines.join('\n');
 }
 
-// ── LOCAL NARRATIVE GENERATOR ──
-function fetchNarrative(s) {
+// ── NARRATIVE GENERATOR (AI with web search → local fallback) ──
+async function fetchNarrative(s) {
   const billingDesc = s.mode==='hourly' ? 'Hourly (no commitment)' : s.mode==='weekly' ? 'Guaranteed Hours ('+s.minHrs+' hrs/wk guaranteed, best rate)' : 'Monthly Retainer ('+s.minHrs+' hrs/mo)';
+  const ind = s.industry || 'General';
+  const contractorWins = s.delta > 0;
+  const savingsAmt = '$'+Math.round(Math.abs(s.delta)).toLocaleString();
+  const stateClean = (s.stateLabel||'').replace(/ \(.*\)/,'');
+
+  const prompt = `You are a senior workforce planning consultant at Main Line Talent Group, a staffing and consulting firm. Write a detailed professional analysis for a workforce cost comparison report.
+
+ROLE: "${s.role}"
+INDUSTRY: ${ind}
+STATE: ${stateClean}
+ENGAGEMENT LENGTH: ${s.months} months
+BILLING STRUCTURE: ${billingDesc}
+SALARY (Direct Hire): $${s.salary.toLocaleString()}
+BILL RATE (Contractor): $${s.rate}/hr
+
+COST SUMMARY:
+- Direct hire total loaded cost: $${Math.round(s.dTotal).toLocaleString()} (annualized: $${Math.round(s.dAnnual).toLocaleString()})
+- Contractor total cost: $${Math.round(s.cTotal).toLocaleString()}
+- Delta: ${savingsAmt} ${contractorWins ? 'in favor of contractor' : 'in favor of direct hire'}
+- Break-even crossover: approximately month ${s.xMo}
+- Recruiting cost: $${Math.round(s.recruitAmt).toLocaleString()}
+- Ramp cost: $${Math.round(s.rampCost).toLocaleString()} (${s.rampLabel})
+- Employer taxes: $${Math.round(s.taxTotal).toLocaleString()}
+- Benefits (health+401k+PTO): $${Math.round(s.healthAmt + s.k401 + s.ptoAmt).toLocaleString()}
+
+INSTRUCTIONS:
+First, search for current compensation data for "${s.role}" roles in ${stateClean || 'the United States'}. Use public job board data to find typical salary ranges for this role.
+
+Then write EXACTLY six sections using these exact plain-text headers. No markdown, no bullets, no asterisks, no symbols. Use flowing prose paragraphs only.
+
+COMPENSATION BENCHMARK
+Write 2-3 paragraphs. Report the typical salary range you found for "${s.role}" in ${stateClean || 'the US market'} from job board data. Compare the client's proposed salary of $${s.salary.toLocaleString()} against these benchmarks — is it below market, at market, or above market? Discuss what this positioning means for candidate quality and time-to-fill. If contractor/consulting rates for this role are available, mention those too.
+
+DIRECT HIRE — PROS AND CONS
+Write 2-3 paragraphs. Analyze the specific advantages and disadvantages of direct hiring for this role in the ${ind} industry. Reference the actual cost figures. Discuss how ${ind} organizations specifically benefit from permanent hires vs. where the model falls short for this scenario.
+
+CONTRACTOR — PROS AND CONS
+Write 2-3 paragraphs. Analyze the contractor model for this specific ${s.months}-month engagement in ${ind}. Reference actual savings/cost figures. Discuss how ${ind} industry dynamics (project cycles, compliance needs, talent availability) make contracting more or less attractive.
+
+INDUSTRY CONTEXT
+Write 2-3 paragraphs. Provide ${ind}-specific workforce trends that are relevant to this hiring decision. Discuss regulatory considerations, talent market dynamics, technology adoption patterns, or seasonal factors specific to ${ind} that affect whether to hire directly or contract. Make this specific and actionable, not generic.
+
+POTENTIAL RISKS TO CONSIDER
+Write 2-3 paragraphs. Cover risks for BOTH hiring models in this specific scenario. Include ${ind}-specific compliance and regulatory risks. Address state-specific considerations for ${stateClean}. Discuss what happens if the engagement timeline changes. Consider talent retention, IP, knowledge transfer, and co-employment risks as relevant.
+
+AREAS TO RESEARCH FURTHER
+Write 2-3 paragraphs. Provide specific, actionable items the hiring manager should investigate before making a decision. Reference ${ind}-specific due diligence items. Suggest benchmarking steps, internal reviews, and market research that would strengthen the decision.
+
+CRITICAL RULES:
+- No markdown formatting whatsoever. No bullets, asterisks, dashes, or numbered lists.
+- Write in flowing prose paragraphs only.
+- Be specific with numbers and data — reference the cost figures provided.
+- Every section must reference the ${ind} industry specifically.
+- Minimum 2 substantial paragraphs per section.
+- Use a professional, consultative tone — like a senior advisor presenting to a VP of Finance.`;
+
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 4000,
+        tools: [{ type: 'web_search_20250305', name: 'web_search' }],
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+
+    if (!resp.ok) throw new Error('API error (' + resp.status + ')');
+    const data = await resp.json();
+
+    // Extract text from response (may contain multiple content blocks from tool use)
+    const text = data.content
+      .filter(b => b.type === 'text')
+      .map(b => b.text)
+      .join('\n');
+
+    if (text && text.length > 200) return text;
+    throw new Error('Response too short');
+  } catch (e) {
+    console.warn('AI narrative unavailable, using local fallback:', e.message);
+    return buildLocalNarrative(s);
+  }
+}
+
+function buildLocalNarrative(s) {
   const ind = s.industry || '';
-  const delta = s.delta;
-  const contractorWins = delta > 0;
-  const savingsAmt = '$'+Math.round(Math.abs(delta)).toLocaleString();
-  const pctSavings = Math.round(Math.abs(delta) / Math.max(s.dTotal, s.cTotal) * 100);
+  const contractorWins = s.delta > 0;
+  const savingsAmt = '$'+Math.round(Math.abs(s.delta)).toLocaleString();
+  const pctSavings = Math.round(Math.abs(s.delta) / Math.max(s.dTotal, s.cTotal) * 100);
   const shortTerm = s.months <= 12;
   const longTerm = s.months > 24;
   const highSalary = s.salary >= 150000;
   const state = s.stateLabel || 'the selected state';
+  const obligationTotal = Math.round(s.taxTotal+s.healthAmt+s.k401+s.ptoAmt+s.itAmt+s.recruitAmt+s.rampCost);
 
   const industryInsights = {
-    'Manufacturing': { directPro:'In manufacturing, direct hires develop deep institutional knowledge of production systems, shop floor workflows, and safety protocols that contractors may take longer to absorb.', contractorPro:'Manufacturing firms often face cyclical demand, so contracting lets you scale technical talent for implementations or plant expansions without permanent headcount during downturns.', risk:'Manufacturing environments may require specific certifications, OSHA training, or union considerations that affect onboarding timelines for either hiring model.', research:'Investigate whether this role requires specialized certifications, and check whether your current partner network can provide implementation support as an alternative.' },
-    'Healthcare': { directPro:'Healthcare organizations benefit from permanent hires who can navigate HIPAA compliance, EHR integrations, and the regulatory landscape that affects every technology decision.', contractorPro:'Healthcare IT projects often have strict go-live deadlines tied to regulatory requirements, and contractors bring specialized implementation experience without long-term cost obligations.', risk:'Healthcare roles may require background checks, credentialing, and HIPAA training that add 2-4 weeks to onboarding regardless of employment model.', research:'Confirm whether this role requires access to protected health information (PHI), which would require a Business Associate Agreement and may limit contractor eligibility.' },
-    'Financial Services': { directPro:'Financial services firms benefit from permanent hires who can build deep expertise in regulatory compliance, risk frameworks, and the specific trading or banking systems the organization relies on.', contractorPro:'Financial services technology projects often face hard regulatory deadlines, and contractors bring specialized expertise for time-bound implementations without adding permanent overhead.', risk:'Financial services roles typically require extensive background checks, licensing verification, and compliance training.', research:'Verify whether this role touches SOX-controlled systems or requires any FINRA/SEC registrations that would affect contractor eligibility or timeline.' },
-    'Technology': { directPro:'Technology companies benefit from permanent hires who contribute to long-term product vision, accumulate codebase knowledge, and participate in the company culture that drives innovation.', contractorPro:'Tech firms frequently use contractors for defined sprints, platform migrations, or to bridge skill gaps while the market for specialized talent remains competitive.', risk:'In a competitive tech labor market, top-tier contractor rates may rise quickly. Intellectual property considerations also require clear contractual boundaries for any work produced.', research:'Evaluate whether IP assignment clauses in your contractor agreements adequately protect proprietary technology, and assess the local talent pool for this skill set.' },
+    'Manufacturing': { directPro:'In manufacturing, direct hires develop deep institutional knowledge of production systems, shop floor workflows, and safety protocols that contractors may take longer to absorb. Manufacturing environments reward continuity, as understanding of ERP systems, quality management processes, and supplier relationships compounds significantly over time.', contractorPro:'Manufacturing firms often face cyclical demand patterns, making contractor flexibility particularly valuable during peak periods, system implementations, or plant expansions. The ability to scale technical talent without permanent headcount commitments aligns well with the project-based nature of many manufacturing initiatives.', risk:'Manufacturing environments may require specific certifications, OSHA training, or union considerations that affect onboarding timelines for either hiring model. Additionally, manufacturing roles often involve access to proprietary processes and trade secrets, which requires careful contractual protections regardless of employment type. State-specific worker classification rules may also apply, particularly in states with aggressive enforcement of independent contractor regulations.', research:'Investigate whether this role requires specialized certifications or safety training that could affect time-to-productivity for either employment model. Review your current ERP vendor or partner network to determine if implementation support could be sourced through existing agreements rather than a new hire. Benchmark the proposed compensation against manufacturing-specific salary surveys from organizations like the National Association of Manufacturers or industry-specific recruiters in your region.' },
+    'Healthcare': { directPro:'Healthcare organizations benefit enormously from permanent hires who can navigate HIPAA compliance, EHR integrations, and the complex regulatory landscape that affects every technology and operational decision. The institutional knowledge required to work effectively within healthcare systems, from understanding clinical workflows to managing vendor relationships with electronic health record providers, takes significant time to develop.', contractorPro:'Healthcare IT projects often have strict go-live deadlines tied to regulatory requirements or fiscal year budgets, and contractors bring specialized implementation experience without long-term cost obligations. The healthcare industry has a well-established contractor ecosystem, particularly for EHR implementations, interoperability projects, and regulatory compliance initiatives.', risk:'Healthcare roles may require background checks, credentialing, and HIPAA training that add 2-4 weeks to onboarding regardless of employment model. Contractor access to protected health information (PHI) must be governed by a Business Associate Agreement (BAA), and any breach of PHI by a contractor still exposes the covered entity to regulatory liability. Additionally, CMS and state health department regulations may impose specific workforce requirements that affect staffing flexibility.', research:'Confirm whether this role requires access to protected health information, which would require a BAA and may limit the contractor talent pool. Review Joint Commission or state licensing requirements that might apply to the function this role supports. Investigate whether comparable healthcare organizations in your region have shifted toward contract staffing for similar roles, and if so, what contract structures they use to manage compliance and continuity risks.' },
+    'Financial Services': { directPro:'Financial services firms benefit from permanent hires who can build deep expertise in regulatory compliance, risk management frameworks, and the specific trading, banking, or insurance systems the organization relies on. The regulatory environment in financial services demands institutional continuity, as auditors and examiners expect consistent points of contact who understand the history of compliance decisions and system architectures.', contractorPro:'Financial services technology projects often face immovable regulatory deadlines, and contractors with specific compliance or platform experience can hit the ground running. The cost premium of contracting is often justified by the speed advantage when facing exam findings, consent order deadlines, or mandatory system upgrades.', risk:'Financial services roles typically require extensive background checks, licensing verification, and compliance training that can add significant time to onboarding. Contractor access to non-public financial information, trading systems, or customer data must be carefully governed, and some regulatory frameworks limit the use of non-employee personnel in certain functions. State regulators and federal agencies like the OCC, FDIC, or SEC may also have specific expectations about workforce continuity for critical functions.', research:'Verify whether this role touches SOX-controlled systems, BSA/AML processes, or requires any FINRA/SEC registrations that would affect contractor eligibility or timeline. Review your institution\'s third-party risk management policy to understand what due diligence requirements apply to contract staffing arrangements. Benchmark the bill rate against financial services staffing market data from firms like Robert Half, Randstad, or specialized financial services recruiters in your market.' },
+    'Technology': { directPro:'Technology companies benefit from permanent hires who contribute to long-term product vision, accumulate deep codebase knowledge, and participate in the architectural decisions that shape the platform for years. The compounding value of institutional knowledge in technology is significant, as understanding not just what the code does but why certain decisions were made accelerates development velocity over time.', contractorPro:'Tech firms frequently use contractors for defined sprints, platform migrations, or to bridge skill gaps while the permanent market for specialized talent remains fiercely competitive. The contractor model allows technology organizations to access niche expertise, such as specific cloud platforms, programming languages, or infrastructure tools, without committing to permanent headcount in skills that may not be needed long-term.', risk:'In a competitive tech labor market, top-tier contractor rates may rise quickly, and key contractors may leave for permanent opportunities elsewhere mid-engagement. Intellectual property considerations require clear contractual boundaries for any work produced, including code ownership, patent assignment, and non-compete provisions. Additionally, technology roles often involve access to source code repositories, production environments, and customer data that create security and compliance exposure with non-permanent staff.', research:'Evaluate whether IP assignment clauses in your contractor agreements adequately protect proprietary technology, and assess whether your non-compete and non-solicitation provisions are enforceable in the applicable state. Benchmark contractor rates against platforms like Levels.fyi, Glassdoor, or Blind for comparable roles and experience levels. Consider whether a contract-to-hire structure might reduce overall risk while preserving the flexibility advantage of starting with a contractor.' },
   };
-  const ins = industryInsights[ind] || null;
+  const ins = industryInsights[ind] || {
+    directPro:'A permanent hire builds institutional knowledge that compounds over time, becoming increasingly valuable as they understand your systems, culture, client relationships, and internal processes. The stability of a direct hire also reduces the management overhead associated with contractor transitions and knowledge transfer cycles.',
+    contractorPro:'Contractors bring focused expertise without long-term overhead, and the engagement can flex up or down with project needs. This model eliminates the employer obligations that add '+('$'+obligationTotal.toLocaleString())+' to the direct-hire cost, including taxes, benefits, recruiting, and productivity ramp.',
+    risk:'Regardless of the hiring model, role transitions carry institutional knowledge risk that should be mitigated with thorough documentation and knowledge transfer plans. Consider the compliance and onboarding requirements specific to your industry when evaluating timeline expectations, and review your state\'s worker classification rules to ensure contractor arrangements are properly structured.',
+    research:'Research the local talent market for this role to understand whether contractor supply is sufficient to meet your timeline and quality requirements. Consider whether the role\'s scope may evolve beyond the initial engagement, which could shift the cost calculus toward direct hire.'
+  };
 
-  let directProsCons = '';
+  let compBenchmark = 'COMPENSATION BENCHMARK\n';
+  compBenchmark += 'The proposed salary of $'+s.salary.toLocaleString()+' for a '+s.role+' role should be evaluated against current market data for '+(state||'the selected region')+'. ';
+  compBenchmark += highSalary ? 'At this compensation level, the role falls in the senior or leadership tier, where candidate expectations around equity, benefits, and career growth often factor as heavily as base salary in the hiring decision. ' : 'At this compensation level, the role is positioned in the mid-market range where candidate supply is typically stronger but competition from larger employers can drive rates upward. ';
+  compBenchmark += 'We recommend benchmarking this salary against current job postings on LinkedIn, Indeed, and Glassdoor for comparable '+s.role+' roles in your region to confirm market alignment. If the salary is below the 50th percentile, expect longer time-to-fill and potentially weaker candidate quality, which increases the effective cost through productivity loss and turnover risk.';
+
+  let directProsCons = 'DIRECT HIRE \u2014 PROS AND CONS\n';
   if (contractorWins) {
-    directProsCons = 'Direct hiring provides long-term stability and full organizational integration'+(highSalary ? ', which is particularly valuable at the $'+s.salary.toLocaleString()+' salary level where institutional knowledge compounds over time' : '')+'. ';
-    directProsCons += 'However, the upfront investment is significant: recruiting costs of $'+Math.round(s.recruitAmt).toLocaleString()+' and a ramp period ('+s.rampLabel+') add $'+Math.round(s.recruitAmt+s.rampCost).toLocaleString()+' before the hire reaches full productivity. ';
-    directProsCons += (ins ? ins.directPro+' ' : '');
-    directProsCons += shortTerm ? 'For a '+s.months+'-month need, these one-time costs may not amortize before the role concludes.' : 'Over '+s.months+' months, these one-time costs begin to amortize but the contractor option still shows a '+savingsAmt+' advantage.';
+    directProsCons += 'Direct hiring provides long-term stability and full organizational integration'+(highSalary ? ', which is particularly valuable at the $'+s.salary.toLocaleString()+' salary level where institutional knowledge compounds over time' : '')+'. ';
+    directProsCons += 'However, the upfront investment is significant: recruiting costs of $'+Math.round(s.recruitAmt).toLocaleString()+' and a ramp period ('+s.rampLabel+') add $'+Math.round(s.recruitAmt+s.rampCost).toLocaleString()+' before the hire reaches full productivity.\n\n';
+    directProsCons += ins.directPro+' ';
+    directProsCons += shortTerm ? 'For a '+s.months+'-month need, these one-time costs may not amortize before the role concludes, making direct hire the more expensive option in this scenario.' : 'Over '+s.months+' months, these one-time costs begin to amortize but the contractor option still shows a '+savingsAmt+' advantage at the current engagement length.';
   } else {
-    directProsCons = 'Direct hiring is the more cost-effective option for this engagement, saving '+savingsAmt+' compared to contracting. ';
-    directProsCons += 'At '+s.months+' months, the one-time costs of recruiting ($'+Math.round(s.recruitAmt).toLocaleString()+') and ramp time fully amortize against the ongoing savings in loaded cost. ';
-    directProsCons += (ins ? ins.directPro+' ' : '');
-    directProsCons += 'The trade-off is less flexibility. A permanent hire commits the organization to ongoing salary, benefits, and employment obligations beyond the project timeline.';
+    directProsCons += 'Direct hiring is the more cost-effective option for this engagement, saving '+savingsAmt+' compared to contracting. At '+s.months+' months, the one-time costs of recruiting ($'+Math.round(s.recruitAmt).toLocaleString()+') and ramp time fully amortize against the ongoing savings in loaded cost.\n\n';
+    directProsCons += ins.directPro+' ';
+    directProsCons += 'The trade-off is less flexibility. A permanent hire commits the organization to ongoing salary, benefits, and employment obligations that total approximately $'+Math.round(s.dAnnual).toLocaleString()+' annually, extending well beyond the project timeline.';
   }
 
-  let contractorProsCons = '';
+  let contractorProsCons = 'CONTRACTOR \u2014 PROS AND CONS\n';
   if (contractorWins) {
-    contractorProsCons = 'Contracting via the '+billingDesc+' structure delivers '+savingsAmt+' in savings (approximately '+pctSavings+'%) over the '+s.months+'-month engagement. ';
-    contractorProsCons += 'The primary financial advantage comes from eliminating employer-side taxes, benefits, recruiting fees, and ramp-up productivity loss, which total $'+Math.round(s.taxTotal+s.healthAmt+s.k401+s.ptoAmt+s.itAmt+s.recruitAmt+s.rampCost).toLocaleString()+' on the direct-hire side. ';
-    contractorProsCons += (ins ? ins.contractorPro+' ' : '');
-    contractorProsCons += shortTerm ? 'For engagements under 12 months, contracting almost always delivers stronger ROI because one-time hiring costs cannot fully amortize.' : 'The break-even point where direct hiring becomes competitive is approximately month '+s.xMo+'.';
+    contractorProsCons += 'Contracting delivers '+savingsAmt+' in savings (approximately '+pctSavings+'%) over this '+s.months+'-month engagement. The primary financial advantage comes from eliminating employer-side taxes, benefits, recruiting fees, and ramp-up productivity loss, which total $'+obligationTotal.toLocaleString()+' on the direct-hire side.\n\n';
+    contractorProsCons += ins.contractorPro+' ';
+    contractorProsCons += shortTerm ? 'For engagements under 12 months, contracting almost always delivers stronger ROI because one-time hiring costs cannot fully amortize.' : 'The break-even point where direct hiring becomes competitive is approximately month '+s.xMo+', which is '+(s.xMo > s.months ? 'beyond' : 'within')+' this engagement window.';
   } else {
-    contractorProsCons = 'Contracting provides flexibility and eliminates employer obligations, but at a $'+s.rate+'/hr bill rate over '+s.months+' months, the total cost exceeds direct hiring by '+savingsAmt+'. ';
-    contractorProsCons += (ins ? ins.contractorPro+' ' : '');
-    contractorProsCons += 'Contracting may still be the right choice if speed-to-start, specialized expertise, or workforce flexibility are higher priorities than pure cost optimization.';
+    contractorProsCons += 'Contracting provides flexibility and eliminates employer obligations, but at a $'+s.rate+'/hr bill rate over '+s.months+' months, the total cost exceeds direct hiring by '+savingsAmt+'. The higher cost buys operational flexibility and zero long-term commitment.\n\n';
+    contractorProsCons += ins.contractorPro+' ';
+    contractorProsCons += 'Contracting may still be the right choice if speed-to-start, specialized expertise, or workforce flexibility are higher priorities than pure cost optimization. If the engagement is expected to be shorter than originally planned, contracting becomes more competitive because the direct-hire one-time costs have less time to amortize.';
   }
 
-  let risks = 'In '+state+', employer tax obligations include state unemployment insurance at the rates reflected in this analysis, which add to the loaded cost of a direct hire. ';
-  risks += (ins ? ins.risk+' ' : 'Regardless of the hiring model, role transitions carry institutional knowledge risk that should be mitigated with thorough documentation and knowledge transfer plans. ');
+  let industryContext = 'INDUSTRY CONTEXT\n';
+  if (ind && ins) {
+    industryContext += 'The '+ind+' sector has specific workforce dynamics that affect this hiring decision. '+ins.directPro.split('.')[0]+'. '+ins.contractorPro.split('.')[0]+'.\n\n';
+    industryContext += 'Organizations in '+ind+' should consider how their regulatory environment, project cycles, and talent market conditions influence the optimal workforce mix. The choice between direct hire and contractor is not purely financial. It reflects how the organization manages compliance obligations, intellectual property, and workforce continuity in a sector where these factors carry significant operational weight.';
+  } else {
+    industryContext += 'Without a specific industry context, the decision framework should focus on the financial comparison, the expected engagement duration, and the organization\'s tolerance for workforce flexibility versus stability.\n\n';
+    industryContext += 'Consider how your organization\'s compliance requirements, project cycles, and talent market conditions influence the optimal workforce model. The financial analysis provides one dimension of the decision, but operational factors like speed-to-start, knowledge transfer risk, and long-term workforce planning should also be weighed.';
+  }
+
+  let risks = 'POTENTIAL RISKS TO CONSIDER\n';
+  risks += ins.risk + '\n\n';
   risks += contractorWins
-    ? 'If the project extends significantly beyond '+s.months+' months, the cost advantage of contracting narrows and may reverse.'
-    : 'If the role scope shrinks or the engagement ends earlier than planned, the direct-hire one-time costs ($'+Math.round(s.recruitAmt+s.rampCost).toLocaleString()+') may not fully amortize, tipping the economics toward contracting.';
-  risks += longTerm ? ' For a '+s.months+'-month engagement, contractor retention is a real risk. Consider whether contract renewal terms or a conversion clause should be negotiated upfront.' : '';
+    ? 'If the project extends significantly beyond '+s.months+' months, the cost advantage of contracting narrows and may reverse past the break-even point of month '+s.xMo+'. Building in re-evaluation milestones at the break-even point is recommended to reassess whether conversion to permanent hire makes sense.'
+    : 'If the role scope shrinks or the engagement ends earlier than planned, the direct-hire one-time costs ($'+Math.round(s.recruitAmt+s.rampCost).toLocaleString()+') may not fully amortize, tipping the economics toward contracting. Consider whether a probationary period or contract-to-hire structure could mitigate this risk.';
+  risks += longTerm ? '\n\nFor a '+s.months+'-month engagement, contractor retention is a real risk. High-performing contractors receive competing offers regularly, and mid-engagement turnover can be more disruptive than a permanent hire resignation because contractor transitions typically involve less notice and no institutional handoff process. Consider whether contract renewal terms, rate escalation provisions, or a conversion clause should be negotiated upfront to protect against this scenario.' : '';
 
-  let research = (ins ? ins.research+' ' : 'Research the local talent market for this role to understand whether contractor supply is sufficient to meet your timeline and quality requirements. ');
-  research += 'Compare the bill rate to current market data for this role to ensure the engagement is competitively priced. ';
-  research += highSalary ? 'At this salary level, explore whether the role could be structured as a contract-to-hire arrangement.' : 'Discuss with your finance team whether the '+s.months+'-month engagement fits within the current budget cycle.';
+  let research = 'AREAS TO RESEARCH FURTHER\n';
+  research += ins.research + '\n\n';
+  research += 'Compare the proposed bill rate of $'+s.rate+'/hr against current market data for comparable '+s.role+' roles in your region to ensure the engagement is competitively priced. ';
+  research += highSalary ? 'At this salary level, explore whether the role could be structured as a contract-to-hire arrangement, preserving flexibility while building toward a permanent relationship. Retained search or executive placement firms may also yield a stronger candidate pool for permanent roles at this compensation tier.' : 'Discuss with your finance team whether the '+s.months+'-month engagement fits within the current budget cycle or if phased commitments would be more practical. Review whether existing vendor agreements or preferred staffing partnerships could provide more favorable rates.';
 
-  return 'DIRECT HIRE \u2014 PROS AND CONS\n'+directProsCons+'\n\nCONTRACTOR \u2014 PROS AND CONS\n'+contractorProsCons+'\n\nPOTENTIAL RISKS TO CONSIDER\n'+risks+'\n\nAREAS TO RESEARCH FURTHER\n'+research;
+  return compBenchmark+'\n\n'+directProsCons+'\n\n'+contractorProsCons+'\n\n'+industryContext+'\n\n'+risks+'\n\n'+research;
 }
 
 // ── PDF BUILDER (opens HTML report in new tab) ──
-function buildPDF(s, narrative) {
+function buildPDF(s, narrative, w) {
   const roleLabel = s.role!=='Not specified' ? s.role : 'General hiring evaluation';
   const industryLabel = s.industry ? '  \u00b7  Industry: '+s.industry : '';
   const dateStr = new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'});
@@ -2791,8 +2899,10 @@ function buildPDF(s, narrative) {
     : 'Direct hire is $'+Math.round(Math.abs(s.delta)).toLocaleString()+' lower cost over this engagement';
 
   const sectionDefs = [
+    {key:'COMPENSATION BENCHMARK', color:'#2d7a4f'},
     {key:'DIRECT HIRE \u2014 PROS AND CONS', color:'#8c8c8c'},
     {key:'CONTRACTOR \u2014 PROS AND CONS', color:'#2C5E79'},
+    {key:'INDUSTRY CONTEXT', color:'#5b4a8a'},
     {key:'POTENTIAL RISKS TO CONSIDER', color:'#b45014'},
     {key:'AREAS TO RESEARCH FURTHER', color:'#2C5E79'},
   ];
@@ -2803,7 +2913,10 @@ function buildPDF(s, narrative) {
     if (start === -1) return;
     const end = nextKey ? narrative.indexOf(nextKey) : narrative.length;
     const body = narrative.slice(start+sec.key.length, end!==-1?end:undefined).trim();
-    sectionHTML += '<div style="background:'+sec.color+';color:#fff;padding:6px 14px;border-radius:4px;font-size:10px;font-weight:700;letter-spacing:0.08em;margin-top:18px;">'+sec.key+'</div><p style="font-size:10.5px;color:#333;line-height:1.7;margin:8px 0 0 0;">'+body+'</p>';
+    // Split into paragraphs on double newlines
+    const paragraphs = body.split(/\n\n+/).filter(p => p.trim());
+    const parasHTML = paragraphs.map(p => '<p style="font-size:10.5px;color:#333;line-height:1.7;margin:8px 0 0 0;">'+p.trim()+'</p>').join('');
+    sectionHTML += '<div style="background:'+sec.color+';color:#fff;padding:6px 14px;border-radius:4px;font-size:10px;font-weight:700;letter-spacing:0.08em;margin-top:18px;">'+sec.key+'</div>'+parasHTML;
   });
 
   const bonusRow = s.bonusCost > 0
@@ -2812,7 +2925,7 @@ function buildPDF(s, narrative) {
 
   const html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>MLTG Cost Analysis \u2014 '+roleLabel+'</title>'
     + '<style>@page{size:letter;margin:0.5in 0.6in;}@media print{body{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}.no-print{display:none!important;}}*{box-sizing:border-box;margin:0;padding:0;}body{font-family:"Segoe UI",Arial,Helvetica,sans-serif;color:#231F20;font-size:11px;line-height:1.5;background:#fff;}.page{max-width:7.5in;margin:0 auto;}.header{background:#231F20;padding:14px 20px;display:flex;justify-content:space-between;align-items:center;}.header-left{color:#fff;font-weight:700;font-size:10px;letter-spacing:0.06em;}.header-right{color:#C4B8AE;font-size:8.5px;}.red-bar{height:3px;background:#EB1C24;}.title-block{background:#f5f3f0;padding:16px 20px;margin-top:16px;border-radius:5px;}.title-block h1{font-size:18px;font-weight:800;margin-bottom:4px;}.title-block .sub{font-size:10px;color:#666;}.params-bar{display:flex;background:#231F20;border-radius:5px;margin-top:12px;overflow:hidden;}.params-bar .param{flex:1;text-align:center;padding:10px 8px;}.params-bar .param-val{color:#fff;font-weight:700;font-size:12px;}.params-bar .param-lbl{color:#b4bec8;font-size:8px;margin-top:3px;}.cards{display:flex;gap:10px;margin-top:14px;}.card{flex:1;border:1px solid #ddd;border-radius:5px;overflow:hidden;}.card-accent{height:3px;}.card-body{padding:14px 16px;}.card h3{font-size:8.5px;text-transform:uppercase;letter-spacing:0.08em;color:#888;margin-bottom:8px;}.card .total{font-size:22px;font-weight:800;margin-bottom:10px;}.card table{width:100%;border-collapse:collapse;}.card td{padding:3px 0;font-size:9.5px;}.card .total-row td{font-weight:700;font-size:10.5px;padding-top:8px;border-top:1px solid #ddd;}.card .green{color:#2d7a4f;}.card .gray{color:#999;}.delta-banner{text-align:center;padding:12px;border-radius:5px;margin-top:14px;color:#fff;}.delta-banner .big{font-size:13px;font-weight:700;}.delta-banner .sm{font-size:9px;opacity:0.85;margin-top:3px;}.section-heading{font-size:15px;font-weight:800;margin-top:24px;margin-bottom:4px;}.section-rule{width:40px;height:2px;background:#EB1C24;margin-bottom:12px;}.cta-box{background:#231F20;border-radius:6px;padding:18px 22px;margin-top:24px;border-left:4px solid #EB1C24;}.cta-box h3{color:#fff;font-size:14px;margin-bottom:6px;}.cta-box p{color:#b4c4d2;font-size:9.5px;line-height:1.6;}.cta-box .email{color:#4C9CC9;font-weight:700;font-size:10px;margin-top:10px;}.footer{text-align:center;font-size:8px;color:#999;margin-top:20px;padding-top:10px;border-top:1px solid #eee;}.print-bar{text-align:center;padding:20px;}.print-bar button{font-family:inherit;padding:12px 32px;font-size:14px;font-weight:700;background:#231F20;color:#fff;border:none;border-radius:6px;cursor:pointer;}.print-bar button:hover{opacity:0.9;}</style></head><body>'
-    + '<div class="no-print print-bar"><button onclick="window.print()">\uD83D\uDDA8\uFE0F Print or Save as PDF</button><p style="font-size:12px;color:#888;margin-top:8px;">Use your browser\'s print dialog \u2192 "Save as PDF" to download.</p></div>'
+    + '<div class="no-print print-bar"><button onclick="window.print()">\uD83D\uDCBE Save as PDF</button><p style="font-size:12px;color:#888;margin-top:8px;">In the print dialog, select <strong>"Save as PDF"</strong> as your destination (instead of a printer).</p></div>'
     + '<div class="page"><div class="header"><div class="header-left">MAIN LINE TALENT GROUP</div><div class="header-right">mainlinetalent.com</div></div><div class="red-bar"></div>'
     + '<div class="title-block"><h1>Workforce Cost Analysis</h1><div class="sub">Role: '+roleLabel+industryLabel+'</div><div class="sub">Prepared by Main Line Talent Group  \u00b7  '+dateStr+'</div></div>'
     + '<div class="params-bar"><div class="param"><div class="param-val">$'+s.salary.toLocaleString()+'</div><div class="param-lbl">Salary</div></div><div class="param"><div class="param-val">$'+s.rate+'/hr</div><div class="param-lbl">Bill Rate</div></div><div class="param"><div class="param-val">'+s.months+' months</div><div class="param-lbl">Engagement</div></div><div class="param"><div class="param-val">'+stateClean+'</div><div class="param-lbl">State</div></div><div class="param"><div class="param-val">'+billingLabel+'</div><div class="param-lbl">Billing</div></div></div>'
@@ -2848,8 +2961,7 @@ function buildPDF(s, narrative) {
     + '<div class="footer">Main Line Talent Group  \u00b7  Workforce Cost Planner  \u00b7  For Discussion Purposes Only</div>'
     + '</div></body></html>';
 
-  const w = window.open('', '_blank');
-  if (w) { w.document.write(html); w.document.close(); }
+  if (w) { w.document.open(); w.document.write(html); w.document.close(); }
   else {
     const blob = new Blob([html], {type:'text/html'});
     const url = URL.createObjectURL(blob);
@@ -2962,6 +3074,9 @@ async function submitEmailCapture() {
   errEl.style.display = 'none';
   $('captureEmail').style.borderColor = '';
 
+  // Open window IMMEDIATELY on user click (prevents popup blocker)
+  const reportWindow = window.open('', '_blank');
+
   const btn = $('emailSubmitBtn');
   const btnText = $('emailSubmitText');
   const spinner = $('emailSpinner');
@@ -2969,7 +3084,7 @@ async function submitEmailCapture() {
   btnText.textContent = 'Preparing your report…';
   spinner.style.display = 'block';
 
-  // Submit to HubSpot (don't let failure block the PDF)
+  // Submit to HubSpot (fire and forget)
   const hubData = {
     email: email,
     firstName: $('captureFirst').value.trim(),
@@ -2978,19 +3093,25 @@ async function submitEmailCapture() {
     industry: $('projectIndustry').value,
     summary: buildCalculatorSummary()
   };
-  submitToHubSpot(hubData); // fire and forget
+  submitToHubSpot(hubData);
 
-  // Generate the PDF report
+  // Show loading state in the report window while narrative generates
+  if (reportWindow) {
+    reportWindow.document.write('<html><head><title>Generating Report...</title></head><body style="font-family:Segoe UI,sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;background:#f5f3f0;"><div style="text-align:center;"><div style="font-size:28px;margin-bottom:16px;">📊</div><div style="font-size:16px;font-weight:700;color:#231F20;">Generating Your Report</div><div style="font-size:13px;color:#888;margin-top:8px;">Researching compensation data and building analysis...</div></div></body></html>');
+  }
+
+  // Generate the PDF report into the already-opened window
   try {
-    const narrative = fetchNarrative(_snap);
-    buildPDF(_snap, narrative);
+    const narrative = await fetchNarrative(_snap);
+    buildPDF(_snap, narrative, reportWindow);
   } catch (e) {
     console.error('Report generation error:', e);
+    if (reportWindow) reportWindow.close();
     alert('Could not generate report: ' + e.message);
   }
 
   btn.disabled = false;
-  btnText.textContent = 'Send Me the Report';
+  btnText.textContent = 'Generate My Report';
   spinner.style.display = 'none';
   closeEmailModal();
 }
