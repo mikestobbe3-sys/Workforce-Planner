@@ -3,7 +3,47 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Workforce Cost Planner — Main Line Talent Group</title>
+<title>Workforce Cost Planner — Direct Hire vs Contractor Calculator | Main Line Talent Group</title>
+<meta name="description" content="Free workforce cost calculator that compares the true cost of hiring a direct W-2 employee versus engaging a contractor. Includes employer taxes, benefits, recruiting fees, ramp costs, and a personalized PESTLE industry analysis. Make smarter hiring decisions with data.">
+<meta name="keywords" content="workforce cost calculator, direct hire vs contractor, hiring cost comparison, true cost of employment, contractor vs full time, staffing cost analysis, workforce planning tool, PESTLE analysis, compensation benchmarking, employer cost calculator, talent management, HR planning tool, Main Line Talent Group">
+<meta name="author" content="Main Line Talent Group">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://mikestobbe3-sys.github.io/Workforce-Planner/workforce_cost_planner.html">
+
+<!-- Open Graph / Social Sharing -->
+<meta property="og:type" content="website">
+<meta property="og:title" content="Workforce Cost Planner — Direct Hire vs Contractor Calculator">
+<meta property="og:description" content="Compare the true cost of hiring a direct employee versus engaging a contractor. Free calculator with industry-specific PESTLE analysis, compensation benchmarking, and a personalized PDF report.">
+<meta property="og:url" content="https://mikestobbe3-sys.github.io/Workforce-Planner/workforce_cost_planner.html">
+<meta property="og:site_name" content="Main Line Talent Group">
+
+<!-- Twitter Card -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Workforce Cost Planner — Direct Hire vs Contractor Calculator">
+<meta name="twitter:description" content="Free calculator comparing true hiring costs: W-2 employee vs contractor. Includes taxes, benefits, recruiting, ramp costs, and industry-specific PESTLE analysis.">
+
+<!-- Schema.org Structured Data -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "Workforce Cost Planner",
+  "description": "Free workforce cost calculator that compares the true cost of hiring a direct W-2 employee versus engaging a contractor, including employer taxes, benefits, recruiting fees, and industry-specific analysis.",
+  "url": "https://mikestobbe3-sys.github.io/Workforce-Planner/workforce_cost_planner.html",
+  "applicationCategory": "BusinessApplication",
+  "operatingSystem": "Any",
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "USD"
+  },
+  "creator": {
+    "@type": "Organization",
+    "name": "Main Line Talent Group",
+    "url": "https://www.mainlinetalent.com"
+  }
+}
+</script>
 <style>
   :root {
     --blue:     #4C9CC9;
@@ -1363,7 +1403,7 @@
             <div id="recruit-desc" class="recruit-desc">
               30% placement fee on annual salary — no upfront cost, success-based.
             </div>
-            <a href="/cdn-cgi/l/email-protection#22515752524d5056624f434b4c4e4b4c4756434e474c560c414d4f1d515740484741561f70726d0272504b414b4c45026b4c53574b505b" class="rpo-btn">
+            <a href="mailto:support@mainlinetalent.com?subject=RPO Pricing Inquiry" class="rpo-btn">
               💬 Inquire About RPO Pricing
             </a>
           </div>
@@ -1582,7 +1622,7 @@
 </footer>
 </div>
 
-<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+<script>
 const $ = id => document.getElementById(id);
 const fmtD  = n => '$' + Math.round(n).toLocaleString();
 const fmtHr = n => '$' + n.toFixed(2) + '/hr';
@@ -3238,7 +3278,7 @@ function buildPDF(s, narrative, w) {
       // Bullet point items (• prefix)
       if (t.startsWith('\u2022')) {
         const bulletText = linkify(t.slice(1).trim());
-        return '<div style="display:flex;gap:8px;margin:6px 0 0 0;align-items:flex-start;">'
+        return '<div class="section-block" style="display:flex;gap:8px;margin:6px 0 0 0;align-items:flex-start;">'
           + '<div style="flex-shrink:0;width:6px;height:6px;background:#EB1C24;border-radius:50%;margin-top:6px;"></div>'
           + '<p style="font-size:10.5px;color:#333;line-height:1.7;margin:0;">'+bulletText+'</p></div>';
       }
@@ -3252,7 +3292,7 @@ function buildPDF(s, narrative, w) {
 
         if (isPestle && pestleIdx !== undefined) {
           const pl = pestleLetters[pestleIdx];
-          return '<div style="display:flex;gap:12px;margin:14px 0 0 0;align-items:flex-start;">'
+          return '<div class="pestle-block" style="display:flex;gap:12px;margin:14px 0 0 0;align-items:flex-start;">'
             + '<div style="flex-shrink:0;width:36px;height:36px;background:'+pl.color+';color:#fff;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;letter-spacing:0;">'+pl.letter+'</div>'
             + '<div style="flex:1;"><div style="font-size:9px;font-weight:700;color:'+pl.color+';text-transform:uppercase;letter-spacing:0.1em;margin-bottom:2px;">'+pl.word+'</div>'
             + '<p style="font-size:10.5px;color:#333;line-height:1.7;margin:0;">'+rest+'</p></div></div>';
@@ -3263,7 +3303,7 @@ function buildPDF(s, narrative, w) {
       return '<p style="font-size:10.5px;color:#333;line-height:1.7;margin:8px 0 0 0;">'+linkify(t)+'</p>';
     }).join('');
 
-    sectionHTML += '<div style="background:'+sec.color+';color:#fff;padding:6px 14px;border-radius:4px;font-size:10px;font-weight:700;letter-spacing:0.08em;margin-top:18px;">'+sec.key+'</div>'+parasHTML;
+    sectionHTML += '<div class="section-banner" style="background:'+sec.color+';color:#fff;padding:6px 14px;border-radius:4px;font-size:10px;font-weight:700;letter-spacing:0.08em;margin-top:18px;">'+sec.key+'</div>'+parasHTML;
   });
 
   const bonusRow = s.bonusCost > 0
@@ -3271,7 +3311,7 @@ function buildPDF(s, narrative, w) {
     : '';
 
   const html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>MLTG Cost Analysis \u2014 '+roleLabel+'</title>'
-    + '<style>@page{size:letter;margin:0.5in 0.6in;}@media print{body{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}.no-print{display:none!important;}}*{box-sizing:border-box;margin:0;padding:0;}body{font-family:"Segoe UI",Arial,Helvetica,sans-serif;color:#231F20;font-size:11px;line-height:1.5;background:#fff;}.page{max-width:7.5in;margin:0 auto;}.header{background:#231F20;padding:14px 20px;display:flex;justify-content:space-between;align-items:center;}.header-left{color:#fff;font-weight:700;font-size:10px;letter-spacing:0.06em;}.header-right{color:#C4B8AE;font-size:8.5px;}.red-bar{height:3px;background:#EB1C24;}.title-block{background:#f5f3f0;padding:16px 20px;margin-top:16px;border-radius:5px;}.title-block h1{font-size:18px;font-weight:800;margin-bottom:4px;}.title-block .sub{font-size:10px;color:#666;}.params-bar{display:flex;background:#231F20;border-radius:5px;margin-top:12px;overflow:hidden;}.params-bar .param{flex:1;text-align:center;padding:10px 8px;}.params-bar .param-val{color:#fff;font-weight:700;font-size:12px;}.params-bar .param-lbl{color:#b4bec8;font-size:8px;margin-top:3px;}.cards{display:flex;gap:10px;margin-top:14px;}.card{flex:1;border:1px solid #ddd;border-radius:5px;overflow:hidden;}.card-accent{height:3px;}.card-body{padding:14px 16px;}.card h3{font-size:8.5px;text-transform:uppercase;letter-spacing:0.08em;color:#888;margin-bottom:8px;}.card .total{font-size:22px;font-weight:800;margin-bottom:10px;}.card table{width:100%;border-collapse:collapse;}.card td{padding:3px 0;font-size:9.5px;}.card .total-row td{font-weight:700;font-size:10.5px;padding-top:8px;border-top:1px solid #ddd;}.card .green{color:#2d7a4f;}.card .gray{color:#999;}.delta-banner{text-align:center;padding:12px;border-radius:5px;margin-top:14px;color:#fff;}.delta-banner .big{font-size:13px;font-weight:700;}.delta-banner .sm{font-size:9px;opacity:0.85;margin-top:3px;}.section-heading{font-size:15px;font-weight:800;margin-top:24px;margin-bottom:12px;}.cta-box{background:#231F20;border-radius:6px;padding:18px 22px;margin-top:24px;border-left:4px solid #EB1C24;}.cta-box h3{color:#fff;font-size:14px;margin-bottom:6px;}.cta-box p{color:#b4c4d2;font-size:9.5px;line-height:1.6;}.cta-box .email{color:#4C9CC9;font-weight:700;font-size:10px;margin-top:10px;}.footer{text-align:center;font-size:8px;color:#999;margin-top:20px;padding-top:10px;border-top:1px solid #eee;}.print-bar{text-align:center;padding:20px;}.print-bar button{font-family:inherit;padding:12px 32px;font-size:14px;font-weight:700;background:#231F20;color:#fff;border:none;border-radius:6px;cursor:pointer;}.print-bar button:hover{opacity:0.9;}</style></head><body>'
+    + '<style>@page{size:letter;margin:0.5in 0.6in;}@media print{body{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}.no-print{display:none!important;}}.pestle-block,.section-block,p{break-inside:avoid;page-break-inside:avoid;}.section-banner{break-after:avoid;page-break-after:avoid;}*{box-sizing:border-box;margin:0;padding:0;}body{font-family:"Segoe UI",Arial,Helvetica,sans-serif;color:#231F20;font-size:11px;line-height:1.5;background:#fff;}.page{max-width:7.5in;margin:0 auto;}.header{background:#231F20;padding:14px 20px;display:flex;justify-content:space-between;align-items:center;}.header-left{color:#fff;font-weight:700;font-size:10px;letter-spacing:0.06em;}.header-right{color:#C4B8AE;font-size:8.5px;}.red-bar{height:3px;background:#EB1C24;}.title-block{background:#f5f3f0;padding:16px 20px;margin-top:16px;border-radius:5px;}.title-block h1{font-size:18px;font-weight:800;margin-bottom:4px;}.title-block .sub{font-size:10px;color:#666;}.params-bar{display:flex;background:#231F20;border-radius:5px;margin-top:12px;overflow:hidden;}.params-bar .param{flex:1;text-align:center;padding:10px 8px;}.params-bar .param-val{color:#fff;font-weight:700;font-size:12px;}.params-bar .param-lbl{color:#b4bec8;font-size:8px;margin-top:3px;}.cards{display:flex;gap:10px;margin-top:14px;}.card{flex:1;border:1px solid #ddd;border-radius:5px;overflow:hidden;}.card-accent{height:3px;}.card-body{padding:14px 16px;}.card h3{font-size:8.5px;text-transform:uppercase;letter-spacing:0.08em;color:#888;margin-bottom:8px;}.card .total{font-size:22px;font-weight:800;margin-bottom:10px;}.card table{width:100%;border-collapse:collapse;}.card td{padding:3px 0;font-size:9.5px;}.card .total-row td{font-weight:700;font-size:10.5px;padding-top:8px;border-top:1px solid #ddd;}.card .green{color:#2d7a4f;}.card .gray{color:#999;}.delta-banner{text-align:center;padding:12px;border-radius:5px;margin-top:14px;color:#fff;}.delta-banner .big{font-size:13px;font-weight:700;}.delta-banner .sm{font-size:9px;opacity:0.85;margin-top:3px;}.section-heading{font-size:15px;font-weight:800;margin-top:24px;margin-bottom:12px;}.cta-box{background:#231F20;border-radius:6px;padding:18px 22px;margin-top:24px;border-left:4px solid #EB1C24;}.cta-box h3{color:#fff;font-size:14px;margin-bottom:6px;}.cta-box p{color:#b4c4d2;font-size:9.5px;line-height:1.6;}.cta-box .email{color:#4C9CC9;font-weight:700;font-size:10px;margin-top:10px;}.footer{text-align:center;font-size:8px;color:#999;margin-top:20px;padding-top:10px;border-top:1px solid #eee;}.print-bar{text-align:center;padding:20px;}.print-bar button{font-family:inherit;padding:12px 32px;font-size:14px;font-weight:700;background:#231F20;color:#fff;border:none;border-radius:6px;cursor:pointer;}.print-bar button:hover{opacity:0.9;}</style></head><body>'
     + '<div class="no-print print-bar"><button onclick="window.print()">\uD83D\uDCBE Save as PDF</button><p style="font-size:12px;color:#888;margin-top:8px;">In the print dialog, select <strong>"Save as PDF"</strong> as your destination (instead of a printer).</p></div>'
     + '<div class="page"><div class="header"><div class="header-left">MAIN LINE TALENT GROUP</div><div class="header-right">mainlinetalent.com</div></div><div class="red-bar"></div>'
     + '<div class="title-block"><h1>Workforce Cost Analysis</h1><div class="sub">Role: '+roleLabel+industryLabel+'</div><div class="sub">Prepared by Main Line Talent Group  \u00b7  '+dateStr+'</div></div>'
@@ -3397,4 +3437,12 @@ document.addEventListener('keydown', function(e) {
   // Hide the calculator
   document.querySelector('.wrapper').style.display = 'none';
 
-  // Generate narrativ
+  // Generate narrative and build report in the current page
+  const narrative = fetchNarrative(snap);
+  buildPDF(snap, narrative, { document: document, isEmbedded: true });
+})();
+
+
+</script>
+</body>
+</html>
