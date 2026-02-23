@@ -8,13 +8,13 @@
 <meta name="keywords" content="workforce cost calculator, direct hire vs contractor, hiring cost comparison, true cost of employment, contractor vs full time, staffing cost analysis, workforce planning tool, PESTLE analysis, compensation benchmarking, employer cost calculator, talent management, HR planning tool, Main Line Talent Group">
 <meta name="author" content="Main Line Talent Group">
 <meta name="robots" content="index, follow">
-<link rel="canonical" href="https://mikestobbe3-sys.github.io/Workforce-Planner/workforce_cost_planner.html">
+<link rel="canonical" href="https://www.mainlinetalent.com/resources/workforceplanningcalculator">
 
 <!-- Open Graph / Social Sharing -->
 <meta property="og:type" content="website">
 <meta property="og:title" content="Workforce Cost Planner — Direct Hire vs Contractor Calculator">
 <meta property="og:description" content="Compare the true cost of hiring a direct employee versus engaging a contractor. Free calculator with industry-specific PESTLE analysis, compensation benchmarking, and a personalized PDF report.">
-<meta property="og:url" content="https://mikestobbe3-sys.github.io/Workforce-Planner/workforce_cost_planner.html">
+<meta property="og:url" content="https://www.mainlinetalent.com/resources/workforceplanningcalculator">
 <meta property="og:site_name" content="Main Line Talent Group">
 
 <!-- Twitter Card -->
@@ -29,7 +29,7 @@
   "@type": "WebApplication",
   "name": "Workforce Cost Planner",
   "description": "Free workforce cost calculator that compares the true cost of hiring a direct W-2 employee versus engaging a contractor, including employer taxes, benefits, recruiting fees, and industry-specific analysis.",
-  "url": "https://mikestobbe3-sys.github.io/Workforce-Planner/workforce_cost_planner.html",
+  "url": "https://www.mainlinetalent.com/resources/workforceplanningcalculator",
   "applicationCategory": "BusinessApplication",
   "operatingSystem": "Any",
   "offers": {
@@ -1479,6 +1479,48 @@
     </div>
   </div>
 
+  <!-- PROJECT CONTEXT (moved above comparison) -->
+  <div class="section-card">
+    <div class="section-header">
+      <span class="sh-eyebrow">Role / Project Context</span>
+      <div class="sh-rule"></div>
+    </div>
+    <div class="section-body">
+      <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px;">
+        <div style="flex:1;min-width:200px;">
+          <label style="font-size:0.72em;font-weight:700;color:#999;text-transform:uppercase;letter-spacing:0.06em;display:block;margin-bottom:5px;">Industry <span style="color:var(--red);">*</span></label>
+          <select id="projectIndustry" class="role-input" style="width:100%;" onchange="updateProjectLabel();validateContext();" required>
+            <option value="">— Select industry —</option>
+            <option value="Aerospace & Defense">Aerospace &amp; Defense</option>
+            <option value="Automotive">Automotive</option>
+            <option value="Construction & Engineering">Construction &amp; Engineering</option>
+            <option value="Distribution & Logistics">Distribution &amp; Logistics</option>
+            <option value="Education">Education</option>
+            <option value="Energy & Utilities">Energy &amp; Utilities</option>
+            <option value="Financial Services">Financial Services</option>
+            <option value="Food & Beverage">Food &amp; Beverage</option>
+            <option value="Government & Public Sector">Government &amp; Public Sector</option>
+            <option value="Healthcare">Healthcare</option>
+            <option value="Manufacturing">Manufacturing</option>
+            <option value="Nonprofit">Nonprofit</option>
+            <option value="Pharma & Life Sciences">Pharma &amp; Life Sciences</option>
+            <option value="Professional Services">Professional Services</option>
+            <option value="Real Estate">Real Estate</option>
+            <option value="Retail & E-commerce">Retail &amp; E-commerce</option>
+            <option value="Technology">Technology</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+      </div>
+      <label style="font-size:0.72em;font-weight:700;color:#999;text-transform:uppercase;letter-spacing:0.06em;display:block;margin-bottom:5px;">Role / project details <span style="color:var(--red);">*</span></label>
+      <input type="text" id="roleDesc" class="role-input-ul"
+        placeholder="e.g. ERP Implementation — Epicor Kinetic migration, 12-month engagement, hybrid remote…"
+        maxlength="300" oninput="updateProjectLabel();validateContext();" required>
+      <div class="role-hint">Both fields are required. Industry and role title are included in your PDF report for tailored insights.</div>
+      <div id="contextValidation" style="display:none;font-size:0.78em;color:var(--red);font-weight:600;margin-top:6px;"></div>
+    </div>
+  </div>
+
   <!-- SINGLE-ROLE COMPARISON (shown below table for active role) -->
   <div id="singleRoleSection">
 
@@ -1544,55 +1586,13 @@
 
   </div><!-- /singleRoleSection -->
 
-  <!-- PROJECT CONTEXT -->
-  <div class="section-card">
-    <div class="section-header">
-      <span class="sh-eyebrow">Role / Project Context</span>
-      <div class="sh-rule"></div>
-    </div>
-    <div class="section-body">
-      <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px;">
-        <div style="flex:1;min-width:200px;">
-          <label style="font-size:0.72em;font-weight:700;color:#999;text-transform:uppercase;letter-spacing:0.06em;display:block;margin-bottom:5px;">Industry <span style="color:var(--red);">*</span></label>
-          <select id="projectIndustry" class="role-input" style="width:100%;" onchange="updateProjectLabel();validateContext();" required>
-            <option value="">— Select industry —</option>
-            <option value="Aerospace & Defense">Aerospace &amp; Defense</option>
-            <option value="Automotive">Automotive</option>
-            <option value="Construction & Engineering">Construction &amp; Engineering</option>
-            <option value="Distribution & Logistics">Distribution &amp; Logistics</option>
-            <option value="Education">Education</option>
-            <option value="Energy & Utilities">Energy &amp; Utilities</option>
-            <option value="Financial Services">Financial Services</option>
-            <option value="Food & Beverage">Food &amp; Beverage</option>
-            <option value="Government & Public Sector">Government &amp; Public Sector</option>
-            <option value="Healthcare">Healthcare</option>
-            <option value="Manufacturing">Manufacturing</option>
-            <option value="Nonprofit">Nonprofit</option>
-            <option value="Pharma & Life Sciences">Pharma &amp; Life Sciences</option>
-            <option value="Professional Services">Professional Services</option>
-            <option value="Real Estate">Real Estate</option>
-            <option value="Retail & E-commerce">Retail &amp; E-commerce</option>
-            <option value="Technology">Technology</option>
-            <option value="Other">Other</option>
-          </select>
-        </div>
-      </div>
-      <label style="font-size:0.72em;font-weight:700;color:#999;text-transform:uppercase;letter-spacing:0.06em;display:block;margin-bottom:5px;">Role / project details <span style="color:var(--red);">*</span></label>
-      <input type="text" id="roleDesc" class="role-input-ul"
-        placeholder="e.g. ERP Implementation — Epicor Kinetic migration, 12-month engagement, hybrid remote…"
-        maxlength="300" oninput="updateProjectLabel();validateContext();" required>
-      <div class="role-hint">Both fields are required. Industry and role title are included in your PDF report for tailored insights.</div>
-      <div id="contextValidation" style="display:none;font-size:0.78em;color:var(--red);font-weight:600;margin-top:6px;"></div>
-    </div>
-  </div>
-
   <!-- Report nudge -->
-  <div style="background:var(--white);border-radius:var(--r);box-shadow:var(--shadow);padding:20px 24px;display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap;border-left:4px solid var(--blue);">
+  <div style="background:var(--dark);border-radius:var(--r);box-shadow:var(--shadow);padding:24px 28px;display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap;border-left:4px solid var(--red);">
     <div>
-      <div style="font-weight:700;font-size:0.95em;color:var(--dark);margin-bottom:4px;">📋 Get the Full Report</div>
-      <div style="font-size:0.83em;color:#666;line-height:1.5;">Generate a branded PDF report with detailed pros, cons, risks, and next steps tailored to your industry and scenario. Enter your email and your report opens instantly.</div>
+      <div style="font-weight:700;font-size:0.95em;color:#fff;margin-bottom:4px;">📋 Get the Full Report</div>
+      <div style="font-size:0.83em;color:#b4c4d2;line-height:1.5;">Generate a branded PDF report with detailed pros, cons, risks, and next steps tailored to your industry and scenario. Enter your email and your report opens instantly.</div>
     </div>
-    <button class="pdf-btn" id="pdfBtn" onclick="generateReport()" style="flex-shrink:0;">
+    <button class="pdf-btn" id="pdfBtn" onclick="generateReport()" style="flex-shrink:0;background:var(--red);color:#fff;">
       <span class="btn-icon">📄</span>
       <span id="pdfBtnText">Generate PDF Report</span>
     </button>
@@ -2798,7 +2798,7 @@ function generateReport() {
           closeEmailModal();
           try {
             var narrative = fetchNarrative(_snap);
-            buildPDF(_snap, narrative, window.open('', '_blank'));
+            buildPDF(_snap, narrative, null);
           } catch (e) {
             console.error('Report error:', e);
             alert('Could not generate report. Please disable your popup blocker and try again.');
@@ -3311,7 +3311,7 @@ function buildPDF(s, narrative, w) {
     : '';
 
   const html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>MLTG Cost Analysis \u2014 '+roleLabel+'</title>'
-    + '<style>@page{size:letter;margin:0.5in 0.6in;}@media print{body{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}.no-print{display:none!important;}}.pestle-block,.section-block,p{break-inside:avoid;page-break-inside:avoid;}.section-banner{break-after:avoid;page-break-after:avoid;}*{box-sizing:border-box;margin:0;padding:0;}body{font-family:"Segoe UI",Arial,Helvetica,sans-serif;color:#231F20;font-size:11px;line-height:1.5;background:#fff;}.page{max-width:7.5in;margin:0 auto;}.header{background:#231F20;padding:14px 20px;display:flex;justify-content:space-between;align-items:center;}.header-left{color:#fff;font-weight:700;font-size:10px;letter-spacing:0.06em;}.header-right{color:#C4B8AE;font-size:8.5px;}.red-bar{height:3px;background:#EB1C24;}.title-block{background:#f5f3f0;padding:16px 20px;margin-top:16px;border-radius:5px;}.title-block h1{font-size:18px;font-weight:800;margin-bottom:4px;}.title-block .sub{font-size:10px;color:#666;}.params-bar{display:flex;background:#231F20;border-radius:5px;margin-top:12px;overflow:hidden;}.params-bar .param{flex:1;text-align:center;padding:10px 8px;}.params-bar .param-val{color:#fff;font-weight:700;font-size:12px;}.params-bar .param-lbl{color:#b4bec8;font-size:8px;margin-top:3px;}.cards{display:flex;gap:10px;margin-top:14px;}.card{flex:1;border:1px solid #ddd;border-radius:5px;overflow:hidden;}.card-accent{height:3px;}.card-body{padding:14px 16px;}.card h3{font-size:8.5px;text-transform:uppercase;letter-spacing:0.08em;color:#888;margin-bottom:8px;}.card .total{font-size:22px;font-weight:800;margin-bottom:10px;}.card table{width:100%;border-collapse:collapse;}.card td{padding:3px 0;font-size:9.5px;}.card .total-row td{font-weight:700;font-size:10.5px;padding-top:8px;border-top:1px solid #ddd;}.card .green{color:#2d7a4f;}.card .gray{color:#999;}.delta-banner{text-align:center;padding:12px;border-radius:5px;margin-top:14px;color:#fff;}.delta-banner .big{font-size:13px;font-weight:700;}.delta-banner .sm{font-size:9px;opacity:0.85;margin-top:3px;}.section-heading{font-size:15px;font-weight:800;margin-top:24px;margin-bottom:12px;}.cta-box{background:#231F20;border-radius:6px;padding:18px 22px;margin-top:24px;border-left:4px solid #EB1C24;}.cta-box h3{color:#fff;font-size:14px;margin-bottom:6px;}.cta-box p{color:#b4c4d2;font-size:9.5px;line-height:1.6;}.cta-box .email{color:#4C9CC9;font-weight:700;font-size:10px;margin-top:10px;}.footer{text-align:center;font-size:8px;color:#999;margin-top:20px;padding-top:10px;border-top:1px solid #eee;}.print-bar{text-align:center;padding:20px;}.print-bar button{font-family:inherit;padding:12px 32px;font-size:14px;font-weight:700;background:#231F20;color:#fff;border:none;border-radius:6px;cursor:pointer;}.print-bar button:hover{opacity:0.9;}</style></head><body>'
+    + '<style>@page{size:letter;margin:0.4in 0.6in 0.5in 0.6in;}@media print{body{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}.no-print{display:none!important;}}.pestle-block,.section-block,p{break-inside:avoid;page-break-inside:avoid;}.section-banner{break-after:avoid;page-break-after:avoid;}*{box-sizing:border-box;margin:0;padding:0;}body{font-family:"Segoe UI",Arial,Helvetica,sans-serif;color:#231F20;font-size:11px;line-height:1.5;background:#fff;}.page{max-width:7.5in;margin:0 auto;}.header{background:#231F20;padding:14px 20px;display:flex;justify-content:space-between;align-items:center;}.header-left{color:#fff;font-weight:700;font-size:10px;letter-spacing:0.06em;}.header-right{color:#C4B8AE;font-size:8.5px;}.red-bar{height:3px;background:#EB1C24;}.title-block{background:#f5f3f0;padding:16px 20px;margin-top:16px;border-radius:5px;}.title-block h1{font-size:18px;font-weight:800;margin-bottom:4px;}.title-block .sub{font-size:10px;color:#666;}.params-bar{display:flex;background:#231F20;border-radius:5px;margin-top:12px;overflow:hidden;}.params-bar .param{flex:1;text-align:center;padding:10px 8px;}.params-bar .param-val{color:#fff;font-weight:700;font-size:12px;}.params-bar .param-lbl{color:#b4bec8;font-size:8px;margin-top:3px;}.cards{display:flex;gap:10px;margin-top:14px;}.card{flex:1;border:1px solid #ddd;border-radius:5px;overflow:hidden;}.card-accent{height:3px;}.card-body{padding:14px 16px;}.card h3{font-size:8.5px;text-transform:uppercase;letter-spacing:0.08em;color:#888;margin-bottom:8px;}.card .total{font-size:22px;font-weight:800;margin-bottom:10px;}.card table{width:100%;border-collapse:collapse;}.card td{padding:3px 0;font-size:9.5px;}.card .total-row td{font-weight:700;font-size:10.5px;padding-top:8px;border-top:1px solid #ddd;}.card .green{color:#2d7a4f;}.card .gray{color:#999;}.delta-banner{text-align:center;padding:12px;border-radius:5px;margin-top:14px;color:#fff;}.delta-banner .big{font-size:13px;font-weight:700;}.delta-banner .sm{font-size:9px;opacity:0.85;margin-top:3px;}.section-heading{font-size:15px;font-weight:800;margin-top:24px;margin-bottom:12px;}.cta-box{background:#231F20;border-radius:6px;padding:18px 22px;margin-top:24px;border-left:4px solid #EB1C24;}.cta-box h3{color:#fff;font-size:14px;margin-bottom:6px;}.cta-box p{color:#b4c4d2;font-size:9.5px;line-height:1.6;}.cta-box .email{color:#4C9CC9;font-weight:700;font-size:10px;margin-top:10px;}.footer{text-align:center;font-size:8px;color:#999;margin-top:20px;padding-top:10px;border-top:1px solid #eee;}.print-bar{text-align:center;padding:20px;}.print-bar button{font-family:inherit;padding:12px 32px;font-size:14px;font-weight:700;background:#231F20;color:#fff;border:none;border-radius:6px;cursor:pointer;}.print-bar button:hover{opacity:0.9;}</style></head><body>'
     + '<div class="no-print print-bar"><button onclick="window.print()">\uD83D\uDCBE Save as PDF</button><p style="font-size:12px;color:#888;margin-top:8px;">In the print dialog, select <strong>"Save as PDF"</strong> as your destination (instead of a printer).</p></div>'
     + '<div class="page"><div class="header"><div class="header-left">MAIN LINE TALENT GROUP</div><div class="header-right">mainlinetalent.com</div></div><div class="red-bar"></div>'
     + '<div class="title-block"><h1>Workforce Cost Analysis</h1><div class="sub">Role: '+roleLabel+industryLabel+'</div><div class="sub">Prepared by Main Line Talent Group  \u00b7  '+dateStr+'</div></div>'
@@ -3369,11 +3369,7 @@ function buildPDF(s, narrative, w) {
   } else {
     const blob = new Blob([html], {type:'text/html'});
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'MLTG_CostAnalysis.html';
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    window.open(url, '_blank');
   }
 }
 
@@ -3395,7 +3391,7 @@ function buildReportURL(snap) {
   };
   const json = JSON.stringify(data);
   const encoded = btoa(unescape(encodeURIComponent(json)));
-  return 'https://mikestobbe3-sys.github.io/Workforce-Planner/workforce_cost_planner.html?report=' + encodeURIComponent(encoded);
+  return 'https://www.mainlinetalent.com/resources/workforceplanningcalculator?report=' + encodeURIComponent(encoded);
 }
 
 // Close modal on Escape key
