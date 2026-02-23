@@ -2718,99 +2718,8 @@ function buildCalculatorSummary() {
   return lines.join('\n');
 }
 
-// ── NARRATIVE GENERATOR (AI with web search → local fallback) ──
-async function fetchNarrative(s) {
-  const billingDesc = s.mode==='hourly' ? 'Hourly (no commitment)' : s.mode==='weekly' ? 'Guaranteed Hours ('+s.minHrs+' hrs/wk guaranteed, best rate)' : 'Monthly Retainer ('+s.minHrs+' hrs/mo)';
-  const ind = s.industry || 'General';
-  const contractorWins = s.delta > 0;
-  const savingsAmt = '$'+Math.round(Math.abs(s.delta)).toLocaleString();
-  const stateClean = (s.stateLabel||'').replace(/ \(.*\)/,'');
-
-  const prompt = `You are a senior workforce planning consultant at Main Line Talent Group, a staffing and consulting firm. Write a detailed professional analysis for a workforce cost comparison report.
-
-ROLE: "${s.role}"
-INDUSTRY: ${ind}
-STATE: ${stateClean}
-ENGAGEMENT LENGTH: ${s.months} months
-BILLING STRUCTURE: ${billingDesc}
-SALARY (Direct Hire): $${s.salary.toLocaleString()}
-BILL RATE (Contractor): $${s.rate}/hr
-
-COST SUMMARY:
-- Direct hire total loaded cost: $${Math.round(s.dTotal).toLocaleString()} (annualized: $${Math.round(s.dAnnual).toLocaleString()})
-- Contractor total cost: $${Math.round(s.cTotal).toLocaleString()}
-- Delta: ${savingsAmt} ${contractorWins ? 'in favor of contractor' : 'in favor of direct hire'}
-- Break-even crossover: approximately month ${s.xMo}
-- Recruiting cost: $${Math.round(s.recruitAmt).toLocaleString()}
-- Ramp cost: $${Math.round(s.rampCost).toLocaleString()} (${s.rampLabel})
-- Employer taxes: $${Math.round(s.taxTotal).toLocaleString()}
-- Benefits (health+401k+PTO): $${Math.round(s.healthAmt + s.k401 + s.ptoAmt).toLocaleString()}
-
-INSTRUCTIONS:
-First, search for current compensation data for "${s.role}" roles in ${stateClean || 'the United States'}. Use public job board data to find typical salary ranges for this role.
-
-Then write EXACTLY six sections using these exact plain-text headers. No markdown, no bullets, no asterisks, no symbols. Use flowing prose paragraphs only.
-
-COMPENSATION BENCHMARK
-Write 2-3 paragraphs. Report the typical salary range you found for "${s.role}" in ${stateClean || 'the US market'} from job board data. Compare the client's proposed salary of $${s.salary.toLocaleString()} against these benchmarks — is it below market, at market, or above market? Discuss what this positioning means for candidate quality and time-to-fill. If contractor/consulting rates for this role are available, mention those too.
-
-DIRECT HIRE — PROS AND CONS
-Write 2-3 paragraphs. Analyze the specific advantages and disadvantages of direct hiring for this role in the ${ind} industry. Reference the actual cost figures. Discuss how ${ind} organizations specifically benefit from permanent hires vs. where the model falls short for this scenario.
-
-CONTRACTOR — PROS AND CONS
-Write 2-3 paragraphs. Analyze the contractor model for this specific ${s.months}-month engagement in ${ind}. Reference actual savings/cost figures. Discuss how ${ind} industry dynamics (project cycles, compliance needs, talent availability) make contracting more or less attractive.
-
-INDUSTRY CONTEXT
-Write 2-3 paragraphs. Provide ${ind}-specific workforce trends that are relevant to this hiring decision. Discuss regulatory considerations, talent market dynamics, technology adoption patterns, or seasonal factors specific to ${ind} that affect whether to hire directly or contract. Make this specific and actionable, not generic.
-
-POTENTIAL RISKS TO CONSIDER
-Write 2-3 paragraphs. Cover risks for BOTH hiring models in this specific scenario. Include ${ind}-specific compliance and regulatory risks. Address state-specific considerations for ${stateClean}. Discuss what happens if the engagement timeline changes. Consider talent retention, IP, knowledge transfer, and co-employment risks as relevant.
-
-AREAS TO RESEARCH FURTHER
-Write 2-3 paragraphs. Provide specific, actionable items the hiring manager should investigate before making a decision. Reference ${ind}-specific due diligence items. Suggest benchmarking steps, internal reviews, and market research that would strengthen the decision.
-
-CRITICAL RULES:
-- No markdown formatting whatsoever. No bullets, asterisks, dashes, or numbered lists.
-- Write in flowing prose paragraphs only.
-- Be specific with numbers and data — reference the cost figures provided.
-- Every section must reference the ${ind} industry specifically.
-- Minimum 2 substantial paragraphs per section.
-- Use a professional, consultative tone — like a senior advisor presenting to a VP of Finance.`;
-
-  try {
-    const resp = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true'
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 4000,
-        tools: [{ type: 'web_search_20250305', name: 'web_search' }],
-        messages: [{ role: 'user', content: prompt }]
-      })
-    });
-
-    if (!resp.ok) throw new Error('API error (' + resp.status + ')');
-    const data = await resp.json();
-
-    // Extract text from response (may contain multiple content blocks from tool use)
-    const text = data.content
-      .filter(b => b.type === 'text')
-      .map(b => b.text)
-      .join('\n');
-
-    if (text && text.length > 200) return text;
-    throw new Error('Response too short');
-  } catch (e) {
-    console.warn('AI narrative unavailable, using local fallback:', e.message);
-    return buildLocalNarrative(s);
-  }
-}
-
-function buildLocalNarrative(s) {
+// ── NARRATIVE GENERATOR (fully local, no API needed) ──
+function fetchNarrative(s) {
   const ind = s.industry || '';
   const contractorWins = s.delta > 0;
   const savingsAmt = '$'+Math.round(Math.abs(s.delta)).toLocaleString();
@@ -2819,73 +2728,201 @@ function buildLocalNarrative(s) {
   const longTerm = s.months > 24;
   const highSalary = s.salary >= 150000;
   const state = s.stateLabel || 'the selected state';
+  const stateClean = (s.stateLabel||'').replace(/ \(.*\)/,'');
   const obligationTotal = Math.round(s.taxTotal+s.healthAmt+s.k401+s.ptoAmt+s.itAmt+s.recruitAmt+s.rampCost);
+  const billingDesc = s.mode==='hourly' ? 'Hourly (no commitment)' : s.mode==='weekly' ? 'Guaranteed Hours ('+s.minHrs+' hrs/wk guaranteed)' : 'Monthly Retainer ('+s.minHrs+' hrs/mo)';
+  const roleName = s.role && s.role !== 'Not specified' ? s.role : 'this role';
 
   const industryInsights = {
-    'Manufacturing': { directPro:'In manufacturing, direct hires develop deep institutional knowledge of production systems, shop floor workflows, and safety protocols that contractors may take longer to absorb. Manufacturing environments reward continuity, as understanding of ERP systems, quality management processes, and supplier relationships compounds significantly over time.', contractorPro:'Manufacturing firms often face cyclical demand patterns, making contractor flexibility particularly valuable during peak periods, system implementations, or plant expansions. The ability to scale technical talent without permanent headcount commitments aligns well with the project-based nature of many manufacturing initiatives.', risk:'Manufacturing environments may require specific certifications, OSHA training, or union considerations that affect onboarding timelines for either hiring model. Additionally, manufacturing roles often involve access to proprietary processes and trade secrets, which requires careful contractual protections regardless of employment type. State-specific worker classification rules may also apply, particularly in states with aggressive enforcement of independent contractor regulations.', research:'Investigate whether this role requires specialized certifications or safety training that could affect time-to-productivity for either employment model. Review your current ERP vendor or partner network to determine if implementation support could be sourced through existing agreements rather than a new hire. Benchmark the proposed compensation against manufacturing-specific salary surveys from organizations like the National Association of Manufacturers or industry-specific recruiters in your region.' },
-    'Healthcare': { directPro:'Healthcare organizations benefit enormously from permanent hires who can navigate HIPAA compliance, EHR integrations, and the complex regulatory landscape that affects every technology and operational decision. The institutional knowledge required to work effectively within healthcare systems, from understanding clinical workflows to managing vendor relationships with electronic health record providers, takes significant time to develop.', contractorPro:'Healthcare IT projects often have strict go-live deadlines tied to regulatory requirements or fiscal year budgets, and contractors bring specialized implementation experience without long-term cost obligations. The healthcare industry has a well-established contractor ecosystem, particularly for EHR implementations, interoperability projects, and regulatory compliance initiatives.', risk:'Healthcare roles may require background checks, credentialing, and HIPAA training that add 2-4 weeks to onboarding regardless of employment model. Contractor access to protected health information (PHI) must be governed by a Business Associate Agreement (BAA), and any breach of PHI by a contractor still exposes the covered entity to regulatory liability. Additionally, CMS and state health department regulations may impose specific workforce requirements that affect staffing flexibility.', research:'Confirm whether this role requires access to protected health information, which would require a BAA and may limit the contractor talent pool. Review Joint Commission or state licensing requirements that might apply to the function this role supports. Investigate whether comparable healthcare organizations in your region have shifted toward contract staffing for similar roles, and if so, what contract structures they use to manage compliance and continuity risks.' },
-    'Financial Services': { directPro:'Financial services firms benefit from permanent hires who can build deep expertise in regulatory compliance, risk management frameworks, and the specific trading, banking, or insurance systems the organization relies on. The regulatory environment in financial services demands institutional continuity, as auditors and examiners expect consistent points of contact who understand the history of compliance decisions and system architectures.', contractorPro:'Financial services technology projects often face immovable regulatory deadlines, and contractors with specific compliance or platform experience can hit the ground running. The cost premium of contracting is often justified by the speed advantage when facing exam findings, consent order deadlines, or mandatory system upgrades.', risk:'Financial services roles typically require extensive background checks, licensing verification, and compliance training that can add significant time to onboarding. Contractor access to non-public financial information, trading systems, or customer data must be carefully governed, and some regulatory frameworks limit the use of non-employee personnel in certain functions. State regulators and federal agencies like the OCC, FDIC, or SEC may also have specific expectations about workforce continuity for critical functions.', research:'Verify whether this role touches SOX-controlled systems, BSA/AML processes, or requires any FINRA/SEC registrations that would affect contractor eligibility or timeline. Review your institution\'s third-party risk management policy to understand what due diligence requirements apply to contract staffing arrangements. Benchmark the bill rate against financial services staffing market data from firms like Robert Half, Randstad, or specialized financial services recruiters in your market.' },
-    'Technology': { directPro:'Technology companies benefit from permanent hires who contribute to long-term product vision, accumulate deep codebase knowledge, and participate in the architectural decisions that shape the platform for years. The compounding value of institutional knowledge in technology is significant, as understanding not just what the code does but why certain decisions were made accelerates development velocity over time.', contractorPro:'Tech firms frequently use contractors for defined sprints, platform migrations, or to bridge skill gaps while the permanent market for specialized talent remains fiercely competitive. The contractor model allows technology organizations to access niche expertise, such as specific cloud platforms, programming languages, or infrastructure tools, without committing to permanent headcount in skills that may not be needed long-term.', risk:'In a competitive tech labor market, top-tier contractor rates may rise quickly, and key contractors may leave for permanent opportunities elsewhere mid-engagement. Intellectual property considerations require clear contractual boundaries for any work produced, including code ownership, patent assignment, and non-compete provisions. Additionally, technology roles often involve access to source code repositories, production environments, and customer data that create security and compliance exposure with non-permanent staff.', research:'Evaluate whether IP assignment clauses in your contractor agreements adequately protect proprietary technology, and assess whether your non-compete and non-solicitation provisions are enforceable in the applicable state. Benchmark contractor rates against platforms like Levels.fyi, Glassdoor, or Blind for comparable roles and experience levels. Consider whether a contract-to-hire structure might reduce overall risk while preserving the flexibility advantage of starting with a contractor.' },
+    'Aerospace & Defense': {
+      directPro: 'Aerospace and defense organizations benefit significantly from permanent hires who can obtain and maintain security clearances, understand ITAR/EAR export control regulations, and build deep knowledge of program-specific requirements that often span multi-year contracts. The institutional continuity that direct hires provide is especially valuable in an industry where program knowledge directly affects contract performance and audit outcomes.',
+      contractorPro: 'Aerospace programs frequently operate in distinct phases with varying staffing needs, and contractors allow organizations to scale specialized engineering, compliance, or program management talent to match program milestones without carrying overhead between phases. Many defense contractors maintain a flexible workforce model specifically because contract vehicles have defined periods of performance.',
+      risk: 'Security clearance requirements can add 3-12 months to onboarding for either employment model, and interim clearances may not be available for all contract types. ITAR and export control regulations impose strict limitations on who can access technical data, which may affect contractor eligibility based on citizenship status. Co-employment risks are heightened in defense environments where contractors work alongside government personnel.',
+      research: 'Verify whether this role requires a security clearance and at what level, as this significantly affects both the available talent pool and time-to-start. Review DCAA audit history for your contract type to understand how contractor labor is scrutinized versus direct hire labor. Investigate whether your prime or subcontract agreement places restrictions on the use of contract labor for key personnel positions.',
+      context: 'The aerospace and defense sector operates under unique workforce constraints driven by security clearance requirements, export control regulations, and government contracting rules. Talent mobility is constrained by clearance portability and program-specific knowledge that does not transfer easily. The industry is experiencing a generational workforce transition, with experienced program managers and systems engineers retiring faster than they can be replaced, putting upward pressure on compensation for both direct hires and contractors.'
+    },
+    'Automotive': {
+      directPro: 'Automotive organizations benefit from permanent hires who understand the complex interplay between manufacturing engineering, supply chain management, and quality systems like IATF 16949. The automotive product development cycle requires deep cross-functional knowledge that takes years to develop, and direct hires who understand your specific platform architectures and launch processes become increasingly valuable over time.',
+      contractorPro: 'The automotive industry operates on well-defined program timelines tied to vehicle launches and model year changes, making contractors a natural fit for roles that align with specific program phases. Contract engineers and IT specialists are commonly used during ERP migrations, plant automation projects, and new model launch support.',
+      risk: 'Automotive quality standards require extensive training and certification, and contractors may face longer ramp times within your quality management system. OEM supplier requirements often mandate specific workforce stability metrics, and high contractor ratios in key functions could trigger customer audit findings.',
+      research: 'Review your OEM customer requirements for workforce stability ratios and ensure contractor usage will not trigger audit concerns. Benchmark compensation against automotive-specific salary data from the Center for Automotive Research or the Original Equipment Suppliers Association. Investigate whether your Tier 1 or Tier 2 supplier agreements include provisions about contract labor on customer-facing programs.',
+      context: 'The automotive industry is undergoing a fundamental transformation driven by electrification, autonomous driving, and software-defined vehicles. This shift creates intense demand for software engineers, battery specialists, and ADAS experts while traditional mechanical and manufacturing roles remain critical. Organizations that can blend permanent core teams with flexible contract talent for emerging technology initiatives are better positioned to navigate this transition.'
+    },
+    'Construction & Engineering': {
+      directPro: 'Construction and engineering firms benefit from permanent hires who understand project-based accounting, lien waiver processes, prevailing wage requirements, and ERP modules specific to job costing and equipment tracking. The relationships that project managers and estimators build with subcontractors, inspectors, and owners over time create significant business value.',
+      contractorPro: 'Construction projects are inherently finite, and using contractors for technology implementations or specialized compliance roles mirrors the project-based work model the industry already operates under. The ability to scale staff without carrying overhead between projects protects margins.',
+      risk: 'Construction industry margins are typically tight, so cost overruns on technology projects have outsized financial impact. Prevailing wage and Davis-Bacon requirements on government-funded projects may affect labor classification for technology roles. Bonding and insurance requirements may need to cover contractor activities.',
+      research: 'Review whether prevailing wage or Davis-Bacon requirements affect labor classification for technology roles on government-funded projects. Investigate whether your surety bonding program has provisions affecting contract labor. Benchmark compensation against surveys from the Associated General Contractors or the Construction Financial Management Association.',
+      context: 'The construction industry faces a persistent skilled labor shortage extending into project management, estimating, and technology roles. The push toward BIM, drone-based surveying, and integrated project delivery is accelerating demand for tech-savvy professionals who also understand construction workflows. This creates a premium for candidates who combine construction domain knowledge with technology skills.'
+    },
+    'Distribution & Logistics': {
+      directPro: 'Distribution and logistics organizations benefit from permanent hires who understand the full supply chain lifecycle, from warehouse management and transportation optimization to last-mile delivery. The institutional knowledge required to manage complex distribution networks and optimize inventory positioning across multiple facilities takes significant time to develop.',
+      contractorPro: 'Logistics technology projects like WMS implementations or TMS upgrades often have well-defined timelines that align naturally with contractor engagements. Bringing in specialized implementation consultants for system cutovers and scaling back to steady-state support manages technology investment without permanent headcount inflation.',
+      risk: 'Supply chain disruptions can shift project timelines rapidly, and fixed-term contractor agreements may need flexibility clauses. Distribution center operations run on tight schedules where contractor ramp time in mission-critical roles can have immediate financial impact through shipping delays or inventory errors.',
+      research: 'Review seasonal volume patterns and how they align with the engagement timeline to ensure coverage during peak shipping periods. Benchmark compensation against data from the Council of Supply Chain Management Professionals or the Warehousing Education and Research Council. Investigate whether your WMS or TMS vendor offers implementation services that could be bundled with the technology investment.',
+      context: 'Distribution and logistics is experiencing rapid transformation driven by e-commerce growth, customer expectations for faster delivery, and adoption of warehouse automation including robotics and AI-powered inventory management. This transformation creates strong demand for professionals who can bridge traditional logistics operations and emerging technology. Labor availability remains constrained at all levels, giving candidates significant leverage in both permanent and contract negotiations.'
+    },
+    'Education': {
+      directPro: 'Educational institutions benefit from permanent hires who understand the academic calendar, FERPA requirements, and unique governance structures including shared governance and accreditation requirements. Staff who can navigate committee-based decision-making and institutional politics effectively become invaluable organizational resources.',
+      contractorPro: 'Education technology projects often align with academic breaks, making summer and winter periods natural windows for implementations. Contractors can execute major projects during low-impact periods and transition to internal teams for ongoing support. Budget constraints common in education also make contractors attractive for one-time initiatives.',
+      risk: 'Education budgets are typically approved annually and subject to mid-year adjustments based on enrollment or state funding changes. FERPA compliance requires contractor training and institutional data governance compliance. The nonprofit salary structure may create internal equity concerns when contractor rates are visible.',
+      research: 'Check whether the institution has preferred vendor lists or staffing agreements that may affect contractor sourcing and rates. Review the fiscal year calendar and budget approval process. Investigate whether IRB review or data governance committee approval is required for contractor access to student or institutional data systems.',
+      context: 'Higher education is under significant financial pressure from declining enrollment, competition from online providers, and growing expectations for technology-enabled learning. These pressures force institutions to modernize while managing costs, creating demand for technology talent that often exceeds what institutions can attract at academic salary scales. The compensation gap between education and private sector is widening for technology roles.'
+    },
+    'Energy & Utilities': {
+      directPro: 'Energy and utility companies benefit from permanent hires who understand the regulatory environment, SCADA/OT system integrations, and the long planning horizons that characterize infrastructure investment. The safety-critical nature of energy operations requires deep organizational knowledge and regulatory framework continuity.',
+      contractorPro: 'Utility modernization projects including grid automation, smart meter deployments, and ERP upgrades often involve specialized skills needed for defined implementation phases. Contractors bring niche expertise without adding permanent headcount in skills that may not be needed at steady-state.',
+      risk: 'Energy sector roles may require NERC CIP clearance, hazmat training, or other security vetting that adds significant onboarding time. Critical infrastructure designations impose additional background check requirements. Rate cases and regulatory proceedings can affect project timelines and budgets unpredictably.',
+      research: 'Confirm whether this role involves access to critical infrastructure systems triggering NERC CIP or TSA security requirements. Review public utility commission requirements for workforce-related reporting. Investigate whether comparable utilities have established preferred staffing partnerships that could provide rate benchmarks.',
+      context: 'The energy sector is in the midst of a generational transformation driven by grid modernization, renewable energy integration, and electrification of transportation. This requires a workforce bridging legacy infrastructure knowledge with emerging technology skills. Retirements among experienced operations staff are accelerating the shortage, creating both opportunity and risk for organizations maintaining reliable service while modernizing.'
+    },
+    'Financial Services': {
+      directPro: 'Financial services firms benefit from permanent hires who build deep expertise in regulatory compliance, risk frameworks, and specific trading, banking, or insurance systems. The regulatory environment demands institutional continuity, as auditors and examiners expect consistent contacts who understand the history of compliance decisions. Permanent staff provide stability for SOX-controlled processes where personnel changes trigger additional documentation.',
+      contractorPro: 'Financial services projects often face immovable regulatory deadlines from consent orders or exam findings, and contractors with specific compliance or platform experience can hit the ground running. The cost premium is often justified by speed and the ability to bring specialized expertise for niche areas like model validation or AML technology.',
+      risk: 'Financial services roles typically require extensive background checks, licensing verification, and compliance training adding 4-8 weeks to onboarding. Contractor access to non-public financial information must be carefully governed under Reg SP and GLBA. Some regulatory frameworks limit non-employee personnel in certain risk management and audit functions.',
+      research: 'Verify whether this role touches SOX-controlled systems, BSA/AML processes, or requires FINRA/SEC registrations. Review your third-party risk management policy for due diligence requirements on contract staffing. Benchmark the bill rate against financial services staffing market data from specialized recruiters in your market.',
+      context: 'Financial services is navigating simultaneous pressures from regulatory modernization, digital transformation, and fintech competition. Regulatory technology spend continues to grow while customer-facing digital platforms require continuous development. These parallel demands create persistent talent pressure, particularly for professionals combining technology expertise with financial services domain knowledge.'
+    },
+    'Food & Beverage': {
+      directPro: 'Food and beverage companies benefit from permanent hires who understand FDA/USDA regulatory requirements, food safety management systems like SQF and FSSC 22000, and the complex supply chain dynamics of perishable goods. Institutional knowledge of your specific manufacturing processes and customer requirements represents a significant competitive advantage.',
+      contractorPro: 'The food and beverage industry experiences pronounced seasonal demand patterns creating natural windows for technology projects. Contractors allow staffing specialized projects during off-peak production periods and scaling back during high-volume seasons without carrying permanent overhead.',
+      risk: 'Food safety and regulatory compliance requirements demand that all personnel, including contractors, receive HACCP, allergen management, and facility-specific safety training. This training time and cost should be factored into the total engagement cost. Facilities often require specific health certifications and background checks.',
+      research: 'Review your food safety and quality management system requirements for training and certification needs. Investigate whether co-packing or co-manufacturing partners have staffing models providing benchmarks. Benchmark compensation against food industry surveys from the Food Processing Suppliers Association or International Food Technologists.',
+      context: 'The food and beverage industry is adapting to shifting consumer preferences, supply chain complexity, and increasing regulatory scrutiny. Technology adoption is accelerating with investments in traceability systems, predictive quality analytics, and automated production. The industry competes for technology talent against sectors offering higher compensation, making creative workforce strategies particularly important.'
+    },
+    'Government & Public Sector': {
+      directPro: 'Public sector organizations benefit from permanent hires who navigate procurement rules, FOIA requirements, and lengthy budget and approval cycles. The stability of permanent employment is a meaningful recruiting advantage, where pension benefits and job security help offset lower base compensation compared to the private sector.',
+      contractorPro: 'Government agencies frequently use contractors to access specialized skills difficult to recruit at public-sector salary bands and to manage work within fiscal year budget constraints. The contractor model provides flexibility to address time-bound mandates or legislative requirements without long-term staffing obligations.',
+      risk: 'Government hiring processes can involve lengthy approval chains, procurement reviews, and compliance checks. Contractor classification must comply with FAR for federal work or state-specific procurement rules. Personal services contracts face particularly strict scrutiny as they can create unauthorized employer-employee relationships.',
+      research: 'Verify whether this engagement falls under existing contract vehicles, BPAs, or GSA schedules. Review the fiscal year timeline and continuing resolution risks. Investigate whether comparable agencies have established staffing strategies that could provide rate benchmarks and engagement structure templates.',
+      context: 'Government agencies at all levels are under pressure to modernize legacy technology while managing constrained budgets and competing with the private sector for talent. The compensation gap continues to widen, making it increasingly difficult to attract skilled permanent staff. This has accelerated contractor and consultant use, creating a robust market but also raising concerns about institutional knowledge loss.'
+    },
+    'Healthcare': {
+      directPro: 'Healthcare organizations benefit enormously from permanent hires who navigate HIPAA compliance, EHR integrations, and the complex regulatory landscape. The institutional knowledge required to work within healthcare systems, from clinical workflows to EHR vendor relationships, takes significant time to develop and represents real organizational value.',
+      contractorPro: 'Healthcare IT projects often have strict go-live deadlines tied to regulatory requirements or fiscal year budgets, and contractors bring specialized implementation experience without long-term obligations. The healthcare industry has a well-established contractor ecosystem, particularly for EHR implementations and interoperability projects.',
+      risk: 'Healthcare roles may require background checks, credentialing, and HIPAA training adding 2-4 weeks to onboarding. Contractor access to PHI must be governed by a BAA, and breaches still expose the covered entity to liability. CMS and state regulations may impose specific workforce requirements affecting staffing flexibility.',
+      research: 'Confirm whether this role requires PHI access, which would require a BAA and may limit the contractor talent pool. Review Joint Commission or state licensing requirements. Investigate whether comparable healthcare organizations have shifted toward contract staffing for similar roles and what compliance frameworks they use.',
+      context: 'Healthcare is experiencing a workforce crisis extending beyond clinical roles into technology, finance, and administrative functions. The pandemic accelerated digital health adoption, creating permanent shifts in telehealth utilization and interoperability requirements. At the same time, margin pressure from payer mix changes and labor cost inflation creates tension between the need for talent and the ability to fund permanent positions.'
+    },
+    'Manufacturing': {
+      directPro: 'In manufacturing, direct hires develop deep institutional knowledge of production systems, shop floor workflows, safety protocols, and ERP configurations. Manufacturing environments reward continuity, as understanding quality management processes, supplier relationships, and equipment maintenance histories compounds over time. Permanent employees also build cross-functional relationships essential for effective problem-solving.',
+      contractorPro: 'Manufacturing firms often face cyclical demand patterns making contractor flexibility valuable during system implementations, plant expansions, or production automation projects. Bringing in specialized talent for ERP implementations or quality system upgrades without permanent headcount commitments aligns with the project-based nature of manufacturing improvements.',
+      risk: 'Manufacturing may require specific certifications, OSHA training, or union considerations affecting onboarding timelines. Access to proprietary processes and trade secrets requires careful contractual protections. In unionized environments, collective bargaining agreements may limit when and how contractors can be deployed.',
+      research: 'Investigate whether this role requires specialized certifications or safety training. Review your ERP vendor or partner network for implementation support through existing agreements. Benchmark compensation against surveys from the National Association of Manufacturers, APICS, or the Society of Manufacturing Engineers.',
+      context: 'Manufacturing is undergoing significant transformation driven by Industry 4.0 technologies, reshoring initiatives, and persistent labor shortages. The convergence of OT and IT creates demand for professionals understanding both manufacturing processes and modern technology. The industry faces demographic challenges as experienced professionals retire faster than they can be replaced.'
+    },
+    'Nonprofit': {
+      directPro: 'Nonprofit organizations benefit from mission-aligned permanent hires who navigate unique governance structures, funding cycles, and stakeholder dynamics. The institutional relationships that staff build with donors, board members, and partner organizations create organizational value difficult to replicate with temporary staff.',
+      contractorPro: 'Nonprofits often operate under tight budget constraints making permanent headcount difficult to justify for specialized roles needed for time-bound initiatives like CRM implementations or digital transformation projects. Contractors allow access to expertise cost-prohibitive to maintain permanently.',
+      risk: 'Nonprofit budgets are typically grant-funded or donor-restricted, creating unique constraints on labor cost allocation and reporting. Engagement costs spanning multiple grant periods may require separate funding sources. The sector typically offers below-market compensation, meaning contractor rates may create internal equity concerns.',
+      research: 'Review grant requirements and donor restrictions for contractor cost allocation. Investigate whether your fiscal sponsor has established staffing agreements or preferred vendor relationships. Benchmark compensation against surveys from Bridgespan, Idealist, or the National Council of Nonprofits.',
+      context: 'The nonprofit sector faces increasing pressure to modernize operations and demonstrate impact through data while competing for talent against private sector organizations offering significantly higher compensation. Many nonprofits are adopting hybrid workforce strategies combining lean permanent staff with project-based contractors to manage costs while accessing specialized expertise.'
+    },
+    'Pharma & Life Sciences': {
+      directPro: 'Life sciences companies benefit enormously from permanent hires who understand GxP validation, 21 CFR Part 11 compliance, and the documentation rigor of regulated environments. Institutional knowledge of how validation protocols and change control procedures work within your organization is deeply valuable, as even small compliance errors can trigger FDA warning letters or product recalls.',
+      contractorPro: 'Pharmaceutical companies frequently engage specialized contractors for validated system implementations, clinical trial data management, and regulatory submission preparation where niche expertise matters more than long-term retention. The project-based nature of drug development creates natural engagement windows.',
+      risk: 'Validated system implementations carry significant documentation and compliance overhead, and contractor transitions can jeopardize validation status if not properly managed. FDA inspections may scrutinize qualifications and training records of all personnel touching validated systems. CSV requirements mean all contractor work must follow established validation protocols.',
+      research: 'Determine whether this role supports a GxP-validated system, which requires specific documentation practices and may limit the contractor talent pool. Review quality management system requirements for contractor qualification. Benchmark compensation against surveys from Radford, BioSpace, or the Drug Information Association.',
+      context: 'Pharma and life sciences is experiencing unprecedented demand for technology talent driven by digital health, real-world evidence, AI-driven drug discovery, and complex data integrity regulations. The convergence of clinical science and technology creates new role profiles commanding premium compensation. Organizations building flexible workforce strategies while maintaining rigorous compliance are best positioned to accelerate their pipelines.'
+    },
+    'Professional Services': {
+      directPro: 'Professional services firms benefit from permanent hires who develop deep client relationships, accumulate industry expertise, and contribute to intellectual capital differentiating the firm. The leverage model depends on experienced professionals who can mentor junior staff, manage clients, and deliver consistent quality.',
+      contractorPro: 'Professional services firms are accustomed to flexing workforce with demand, and subcontracting specialized talent allows bidding on engagements requiring capabilities outside the permanent bench. The contractor model also provides a natural evaluation period for potential permanent hires.',
+      risk: 'Client contracts often include provisions about qualifications and continuity of key personnel. Substituting a contractor may require client approval. Subcontractor margins must be managed to maintain profitability, and rate transparency requirements in some contracts may create pricing challenges.',
+      research: 'Review client contracts for key personnel provisions, non-solicitation clauses, and subcontractor approval requirements. Investigate whether professional liability insurance covers subcontractor work. Benchmark compensation against data from Kennedy Consulting Research or the Association of Management Consulting Firms.',
+      context: 'Professional services operates on a people-driven model where talent quality directly determines revenue capacity and client satisfaction. The shift toward digital consulting and technology implementation has intensified competition for talent with hybrid skill sets combining domain expertise with technology capabilities.'
+    },
+    'Real Estate': {
+      directPro: 'Real estate organizations benefit from permanent hires who understand property market cycles, transaction regulatory requirements, and technology platforms supporting portfolio management and leasing. Permanent staff with established connections to brokers, lenders, and property managers provide significant business development value.',
+      contractorPro: 'Real estate technology projects, including property management system implementations and portfolio analytics upgrades, often align with lease cycles or fiscal year budgets creating natural engagement windows. Contractors execute these without adding permanent overhead to property management costs.',
+      risk: 'Real estate markets are cyclical, and downturns can rapidly shift project urgency and budgets. Contractor agreements should include provisions for early termination or scope reduction. Roles involving tenant personal information or financial records require applicable privacy law compliance.',
+      research: 'Review property management agreements and investor reporting requirements for staffing provisions. Benchmark compensation against surveys from NAREIT or BOMA. Investigate whether your property management or ERP vendor offers implementation services reducing external staffing needs.',
+      context: 'Real estate is investing heavily in proptech to improve tenant experience, optimize building operations, and enhance portfolio analytics. The industry faces market uncertainty from interest rate dynamics, remote work patterns, and evolving ESG requirements that add complexity to property management and reporting.'
+    },
+    'Retail & E-commerce': {
+      directPro: 'Retail organizations benefit from permanent hires who understand omnichannel operations, seasonal planning, and the complex integrations between POS, inventory, e-commerce, and fulfillment systems. Permanent staff who manage continuous platform evolution while maintaining operational stability provide essential organizational capability.',
+      contractorPro: 'Retail technology projects often align with specific seasons or launches, and contractors can ramp quickly for holiday readiness or major system cutovers. Surging technology capacity during critical windows and scaling back to steady-state aligns with the retail operating model.',
+      risk: 'Implementation timelines must account for peak selling seasons. Starting a major implementation too close to Q4 introduces risk to both the project and store operations. PCI-DSS compliance requirements apply to roles touching payment systems, adding training and access control requirements for contractors.',
+      research: 'Map the engagement against your retail calendar to avoid conflicts with peak revenue periods. Review PCI-DSS requirements for contractor access to payment systems. Benchmark compensation against retail technology data from the National Retail Federation or retail-specific recruiting firms.',
+      context: 'Retail and e-commerce is in continuous transformation driven by shifting consumer behavior, marketplace competition, and convergence of physical and digital experiences. Retailers must maintain legacy store systems while building digital capabilities, creating persistent demand for technology talent. The industry competes against technology companies offering higher compensation, making creative workforce strategies essential.'
+    },
+    'Technology': {
+      directPro: 'Technology companies benefit from permanent hires contributing to long-term product vision, accumulating deep codebase knowledge, and participating in architectural decisions. Understanding not just what code does but why decisions were made accelerates development velocity and reduces technical debt. Permanent engineers build the cross-team relationships enabling effective collaboration in complex organizations.',
+      contractorPro: 'Tech firms frequently use contractors for defined sprints, platform migrations, or bridging skill gaps. The contractor model allows access to niche expertise in specific cloud platforms, languages, or tools without committing to permanent headcount in skills that may not be needed long-term as stacks evolve.',
+      risk: 'In a competitive tech labor market, top contractor rates may rise quickly and key contractors may leave mid-engagement. IP considerations require clear contractual boundaries including code ownership, patent assignment, and non-competes. Technology roles involve access to source code, production environments, and customer data creating security exposure with non-permanent staff.',
+      research: 'Evaluate IP assignment clauses in your contractor agreements and assess non-compete enforceability in '+stateClean+'. Benchmark contractor rates against Levels.fyi, Glassdoor, or Blind. Consider whether contract-to-hire might reduce risk while preserving flexibility, and review your onboarding process to estimate realistic ramp time for both models.',
+      context: 'Technology continues to experience intense talent competition, particularly in AI, cloud infrastructure, cybersecurity, and platform engineering. While recent corrections created some loosening, demand for senior and specialized engineers remains strong. Equity compensation plays a significant role in tech total rewards, meaning base salary comparisons alone may not capture the full cost differential between direct hire and contractor models.'
+    },
   };
+
   const ins = industryInsights[ind] || {
-    directPro:'A permanent hire builds institutional knowledge that compounds over time, becoming increasingly valuable as they understand your systems, culture, client relationships, and internal processes. The stability of a direct hire also reduces the management overhead associated with contractor transitions and knowledge transfer cycles.',
-    contractorPro:'Contractors bring focused expertise without long-term overhead, and the engagement can flex up or down with project needs. This model eliminates the employer obligations that add '+('$'+obligationTotal.toLocaleString())+' to the direct-hire cost, including taxes, benefits, recruiting, and productivity ramp.',
-    risk:'Regardless of the hiring model, role transitions carry institutional knowledge risk that should be mitigated with thorough documentation and knowledge transfer plans. Consider the compliance and onboarding requirements specific to your industry when evaluating timeline expectations, and review your state\'s worker classification rules to ensure contractor arrangements are properly structured.',
-    research:'Research the local talent market for this role to understand whether contractor supply is sufficient to meet your timeline and quality requirements. Consider whether the role\'s scope may evolve beyond the initial engagement, which could shift the cost calculus toward direct hire.'
+    directPro: 'A permanent hire builds institutional knowledge that compounds over time, becoming increasingly valuable as they understand your systems, culture, and processes. The stability of a direct hire reduces management overhead associated with contractor transitions and knowledge transfer cycles, providing continuity benefiting both efficiency and culture.',
+    contractorPro: 'Contractors bring focused expertise without long-term overhead, and the engagement can flex with project needs. This model eliminates employer obligations totaling $'+obligationTotal.toLocaleString()+' on the direct-hire side, including taxes, benefits, recruiting, and productivity ramp, providing a cleaner cost structure for defined-scope initiatives.',
+    risk: 'Role transitions carry institutional knowledge risk that should be mitigated with thorough documentation and knowledge transfer plans. Consider compliance and onboarding requirements specific to your industry, and review '+stateClean+'\'s worker classification rules to ensure contractor arrangements are properly structured to avoid misclassification liability.',
+    research: 'Research the local talent market for '+roleName+' roles in '+stateClean+' to understand whether contractor supply meets your timeline and quality requirements. Consider whether the role\'s scope may evolve beyond the initial engagement, which could shift the cost calculus toward direct hire.',
+    context: 'The broader labor market for '+roleName+' roles continues to evolve based on economic conditions, technology adoption trends, and workforce preferences around flexibility and remote work. Organizations that clearly articulate their value proposition, whether through compensation, mission, flexibility, or growth, are better positioned to attract top talent in both permanent and contract markets.'
   };
 
+  // ── COMPENSATION BENCHMARK ──
   let compBenchmark = 'COMPENSATION BENCHMARK\n';
-  compBenchmark += 'The proposed salary of $'+s.salary.toLocaleString()+' for a '+s.role+' role should be evaluated against current market data for '+(state||'the selected region')+'. ';
-  compBenchmark += highSalary ? 'At this compensation level, the role falls in the senior or leadership tier, where candidate expectations around equity, benefits, and career growth often factor as heavily as base salary in the hiring decision. ' : 'At this compensation level, the role is positioned in the mid-market range where candidate supply is typically stronger but competition from larger employers can drive rates upward. ';
-  compBenchmark += 'We recommend benchmarking this salary against current job postings on LinkedIn, Indeed, and Glassdoor for comparable '+s.role+' roles in your region to confirm market alignment. If the salary is below the 50th percentile, expect longer time-to-fill and potentially weaker candidate quality, which increases the effective cost through productivity loss and turnover risk.';
+  compBenchmark += 'The proposed salary of $'+s.salary.toLocaleString()+' for a '+roleName+' role in '+stateClean+' should be evaluated against current market data to ensure competitive positioning. ';
+  if (highSalary) {
+    compBenchmark += 'At this compensation level, the role falls in the senior or leadership tier where candidate expectations around equity, benefits, career growth, and work flexibility often factor as heavily as base salary. Candidates at this level typically have multiple options, and time-to-fill can extend significantly if the total compensation package is not competitive.\n\n';
+    compBenchmark += 'We recommend benchmarking this salary against current job postings on LinkedIn, Indeed, and Glassdoor for comparable '+roleName+' roles in '+stateClean+'. Industry-specific compensation surveys'+(ind ? ' for the '+ind+' sector' : '')+' can provide more precise benchmarks. At the $'+s.salary.toLocaleString()+' level, the equivalent contractor rate of $'+s.rate+'/hr should also be benchmarked, as contractor rate expectations at this seniority level vary significantly based on skill set and demand.';
+  } else {
+    compBenchmark += 'At this compensation level, the role is positioned in the mid-market range where candidate supply is typically broader but competition from larger employers and remote opportunities can still create hiring pressure. The key question is whether $'+s.salary.toLocaleString()+' is at, above, or below median for comparable roles in your region, as below-median positioning extends time-to-fill and may reduce candidate quality.\n\n';
+    compBenchmark += 'We recommend cross-referencing this salary against active job postings for '+roleName+' roles on major job boards. If below the 50th percentile, consider whether adjusting the offer, enhancing benefits, or offering flexibility could improve candidate quality. The proposed bill rate of $'+s.rate+'/hr for the contractor option should similarly be benchmarked against current market rates.';
+  }
 
+  // ── DIRECT HIRE ──
   let directProsCons = 'DIRECT HIRE \u2014 PROS AND CONS\n';
   if (contractorWins) {
-    directProsCons += 'Direct hiring provides long-term stability and full organizational integration'+(highSalary ? ', which is particularly valuable at the $'+s.salary.toLocaleString()+' salary level where institutional knowledge compounds over time' : '')+'. ';
-    directProsCons += 'However, the upfront investment is significant: recruiting costs of $'+Math.round(s.recruitAmt).toLocaleString()+' and a ramp period ('+s.rampLabel+') add $'+Math.round(s.recruitAmt+s.rampCost).toLocaleString()+' before the hire reaches full productivity.\n\n';
+    directProsCons += 'Direct hiring provides long-term stability and full organizational integration'+(highSalary ? ', particularly valuable at the $'+s.salary.toLocaleString()+' salary level where institutional knowledge compounds significantly' : '')+'. However, the upfront investment is significant: recruiting costs of $'+Math.round(s.recruitAmt).toLocaleString()+' and a ramp period ('+s.rampLabel+') add $'+Math.round(s.recruitAmt+s.rampCost).toLocaleString()+' before the hire reaches full productivity. The total loaded cost of $'+Math.round(s.dTotal).toLocaleString()+' includes $'+Math.round(s.taxTotal).toLocaleString()+' in employer taxes, $'+Math.round(s.healthAmt).toLocaleString()+' in health insurance, and $'+Math.round(s.ptoAmt).toLocaleString()+' in PTO costs that significantly affect the true cost of employment.\n\n';
     directProsCons += ins.directPro+' ';
-    directProsCons += shortTerm ? 'For a '+s.months+'-month need, these one-time costs may not amortize before the role concludes, making direct hire the more expensive option in this scenario.' : 'Over '+s.months+' months, these one-time costs begin to amortize but the contractor option still shows a '+savingsAmt+' advantage at the current engagement length.';
+    directProsCons += shortTerm ? 'For a '+s.months+'-month need, these one-time costs may not amortize before the role concludes, making direct hire the more expensive option.' : 'Over '+s.months+' months, these costs begin to amortize but the contractor option still shows a '+savingsAmt+' advantage.';
   } else {
-    directProsCons += 'Direct hiring is the more cost-effective option for this engagement, saving '+savingsAmt+' compared to contracting. At '+s.months+' months, the one-time costs of recruiting ($'+Math.round(s.recruitAmt).toLocaleString()+') and ramp time fully amortize against the ongoing savings in loaded cost.\n\n';
+    directProsCons += 'Direct hiring is the more cost-effective option, saving '+savingsAmt+' (approximately '+pctSavings+'%) compared to contracting over '+s.months+' months. The one-time costs of recruiting ($'+Math.round(s.recruitAmt).toLocaleString()+') and ramp productivity loss ($'+Math.round(s.rampCost).toLocaleString()+') fully amortize at this engagement length.\n\n';
     directProsCons += ins.directPro+' ';
-    directProsCons += 'The trade-off is less flexibility. A permanent hire commits the organization to ongoing salary, benefits, and employment obligations that total approximately $'+Math.round(s.dAnnual).toLocaleString()+' annually, extending well beyond the project timeline.';
+    directProsCons += 'The trade-off is reduced flexibility. A permanent hire commits the organization to an annualized cost of approximately $'+Math.round(s.dAnnual).toLocaleString()+' in salary, taxes, benefits, and overhead extending well beyond the '+s.months+'-month project timeline.';
   }
 
+  // ── CONTRACTOR ──
   let contractorProsCons = 'CONTRACTOR \u2014 PROS AND CONS\n';
   if (contractorWins) {
-    contractorProsCons += 'Contracting delivers '+savingsAmt+' in savings (approximately '+pctSavings+'%) over this '+s.months+'-month engagement. The primary financial advantage comes from eliminating employer-side taxes, benefits, recruiting fees, and ramp-up productivity loss, which total $'+obligationTotal.toLocaleString()+' on the direct-hire side.\n\n';
+    contractorProsCons += 'Contracting via the '+billingDesc+' structure delivers '+savingsAmt+' in savings (approximately '+pctSavings+'%) over this '+s.months+'-month engagement. The primary advantage comes from eliminating employer-side obligations totaling $'+obligationTotal.toLocaleString()+', including payroll taxes ($'+Math.round(s.taxTotal).toLocaleString()+'), benefits ($'+Math.round(s.healthAmt+s.k401+s.ptoAmt).toLocaleString()+'), recruiting ($'+Math.round(s.recruitAmt).toLocaleString()+'), and ramp loss ($'+Math.round(s.rampCost).toLocaleString()+').\n\n';
     contractorProsCons += ins.contractorPro+' ';
-    contractorProsCons += shortTerm ? 'For engagements under 12 months, contracting almost always delivers stronger ROI because one-time hiring costs cannot fully amortize.' : 'The break-even point where direct hiring becomes competitive is approximately month '+s.xMo+', which is '+(s.xMo > s.months ? 'beyond' : 'within')+' this engagement window.';
+    contractorProsCons += shortTerm ? 'For engagements under 12 months, contracting almost always delivers stronger ROI because one-time hiring costs cannot fully amortize.' : 'The break-even point where direct hiring becomes competitive is approximately month '+s.xMo+', '+(s.xMo > s.months ? 'beyond' : 'within')+' this engagement window.';
   } else {
-    contractorProsCons += 'Contracting provides flexibility and eliminates employer obligations, but at a $'+s.rate+'/hr bill rate over '+s.months+' months, the total cost exceeds direct hiring by '+savingsAmt+'. The higher cost buys operational flexibility and zero long-term commitment.\n\n';
+    contractorProsCons += 'Contracting provides flexibility and eliminates employer obligations, but at $'+s.rate+'/hr over '+s.months+' months, the total of $'+Math.round(s.cTotal).toLocaleString()+' exceeds direct hiring by '+savingsAmt+'. The higher cost buys operational flexibility, zero long-term commitment, and the ability to end the engagement without severance or ongoing obligations.\n\n';
     contractorProsCons += ins.contractorPro+' ';
-    contractorProsCons += 'Contracting may still be the right choice if speed-to-start, specialized expertise, or workforce flexibility are higher priorities than pure cost optimization. If the engagement is expected to be shorter than originally planned, contracting becomes more competitive because the direct-hire one-time costs have less time to amortize.';
+    contractorProsCons += 'Contracting may still be the right choice if speed-to-start, specialized expertise, or flexibility outweigh pure cost optimization. If the engagement ends earlier than '+s.months+' months, contracting becomes more competitive as direct-hire one-time costs of $'+Math.round(s.recruitAmt+s.rampCost).toLocaleString()+' have less time to amortize.';
   }
 
+  // ── INDUSTRY CONTEXT ──
   let industryContext = 'INDUSTRY CONTEXT\n';
-  if (ind && ins) {
-    industryContext += 'The '+ind+' sector has specific workforce dynamics that affect this hiring decision. '+ins.directPro.split('.')[0]+'. '+ins.contractorPro.split('.')[0]+'.\n\n';
-    industryContext += 'Organizations in '+ind+' should consider how their regulatory environment, project cycles, and talent market conditions influence the optimal workforce mix. The choice between direct hire and contractor is not purely financial. It reflects how the organization manages compliance obligations, intellectual property, and workforce continuity in a sector where these factors carry significant operational weight.';
+  industryContext += ins.context+'\n\n';
+  if (ind) {
+    industryContext += 'For '+ind+' organizations evaluating a '+roleName+' role, the decision should be informed by both the financial analysis above and sector-specific dynamics affecting talent availability, compliance requirements, and long-term workforce planning. The choice between direct hire and contractor reflects how the organization manages compliance, intellectual property, institutional knowledge, and workforce continuity in a sector where these factors carry meaningful weight.';
   } else {
-    industryContext += 'Without a specific industry context, the decision framework should focus on the financial comparison, the expected engagement duration, and the organization\'s tolerance for workforce flexibility versus stability.\n\n';
-    industryContext += 'Consider how your organization\'s compliance requirements, project cycles, and talent market conditions influence the optimal workforce model. The financial analysis provides one dimension of the decision, but operational factors like speed-to-start, knowledge transfer risk, and long-term workforce planning should also be weighed.';
+    industryContext += 'The decision framework should focus on the financial comparison, expected engagement duration, and tolerance for flexibility versus stability. The financial analysis provides one dimension, but operational factors like speed-to-start, knowledge transfer risk, and long-term planning should also inform the decision.';
   }
 
+  // ── RISKS ──
   let risks = 'POTENTIAL RISKS TO CONSIDER\n';
-  risks += ins.risk + '\n\n';
+  risks += ins.risk+'\n\n';
   risks += contractorWins
-    ? 'If the project extends significantly beyond '+s.months+' months, the cost advantage of contracting narrows and may reverse past the break-even point of month '+s.xMo+'. Building in re-evaluation milestones at the break-even point is recommended to reassess whether conversion to permanent hire makes sense.'
-    : 'If the role scope shrinks or the engagement ends earlier than planned, the direct-hire one-time costs ($'+Math.round(s.recruitAmt+s.rampCost).toLocaleString()+') may not fully amortize, tipping the economics toward contracting. Consider whether a probationary period or contract-to-hire structure could mitigate this risk.';
-  risks += longTerm ? '\n\nFor a '+s.months+'-month engagement, contractor retention is a real risk. High-performing contractors receive competing offers regularly, and mid-engagement turnover can be more disruptive than a permanent hire resignation because contractor transitions typically involve less notice and no institutional handoff process. Consider whether contract renewal terms, rate escalation provisions, or a conversion clause should be negotiated upfront to protect against this scenario.' : '';
+    ? 'If the project extends significantly beyond '+s.months+' months, the cost advantage narrows and reverses past the break-even of approximately month '+s.xMo+'. Building in re-evaluation milestones at or before break-even is recommended to assess whether conversion to permanent hire makes sense. Conversion costs including any buyout or placement fee should be factored in.'
+    : 'If the scope shrinks or the engagement ends early, the direct-hire one-time costs of $'+Math.round(s.recruitAmt+s.rampCost).toLocaleString()+' may not fully amortize, tipping economics toward contracting. Consider whether a probationary period, contract-to-hire structure, or phased commitment could mitigate this risk.';
+  risks += longTerm ? '\n\nFor a '+s.months+'-month engagement, contractor retention is a real and often underestimated risk. High-performing contractors receive competing offers regularly, and mid-engagement turnover can be more disruptive than permanent hire resignation because contractor transitions typically involve less notice and no institutional handoff. Consider whether renewal terms, rate escalation provisions, or a conversion clause should be negotiated upfront.' : '';
 
+  // ── RESEARCH ──
   let research = 'AREAS TO RESEARCH FURTHER\n';
-  research += ins.research + '\n\n';
-  research += 'Compare the proposed bill rate of $'+s.rate+'/hr against current market data for comparable '+s.role+' roles in your region to ensure the engagement is competitively priced. ';
-  research += highSalary ? 'At this salary level, explore whether the role could be structured as a contract-to-hire arrangement, preserving flexibility while building toward a permanent relationship. Retained search or executive placement firms may also yield a stronger candidate pool for permanent roles at this compensation tier.' : 'Discuss with your finance team whether the '+s.months+'-month engagement fits within the current budget cycle or if phased commitments would be more practical. Review whether existing vendor agreements or preferred staffing partnerships could provide more favorable rates.';
+  research += ins.research+'\n\n';
+  research += 'Compare the proposed bill rate of $'+s.rate+'/hr against current market data for comparable '+roleName+' roles in '+stateClean+' to ensure competitive pricing. ';
+  research += highSalary ? 'At this salary level, explore whether a contract-to-hire arrangement could preserve flexibility while building toward permanent employment. Retained search or executive placement firms may also yield a stronger candidate pool. Review existing vendor partnerships for negotiated rates or volume discounts.' : 'Discuss with your finance team whether the '+s.months+'-month engagement fits within the current budget cycle or if phased commitments would be more practical. Review existing vendor agreements or preferred staffing partnerships for favorable rates or pre-vetted talent pools.';
 
   return compBenchmark+'\n\n'+directProsCons+'\n\n'+contractorProsCons+'\n\n'+industryContext+'\n\n'+risks+'\n\n'+research;
 }
-
 // ── PDF BUILDER (opens HTML report in new tab) ──
 function buildPDF(s, narrative, w) {
   const roleLabel = s.role!=='Not specified' ? s.role : 'General hiring evaluation';
@@ -2961,8 +2998,15 @@ function buildPDF(s, narrative, w) {
     + '<div class="footer">Main Line Talent Group  \u00b7  Workforce Cost Planner  \u00b7  For Discussion Purposes Only</div>'
     + '</div></body></html>';
 
-  if (w) { w.document.open(); w.document.write(html); w.document.close(); }
-  else {
+  if (w && w.isEmbedded) {
+    // Render into the current page (report viewer mode)
+    document.head.insertAdjacentHTML('beforeend', '<style>' + html.match(/<style>([\s\S]*?)<\/style>/)[1] + '</style>');
+    const bodyMatch = html.match(/<body>([\s\S]*?)<\/body>/);
+    if (bodyMatch) document.body.innerHTML = bodyMatch[1];
+    document.title = 'Cost Analysis \u2014 ' + (s.role || 'Workforce') + ' \u2014 MLTG';
+  } else if (w) {
+    w.document.open(); w.document.write(html); w.document.close();
+  } else {
     const blob = new Blob([html], {type:'text/html'});
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -2985,6 +3029,7 @@ async function submitToHubSpot(data) {
   if (data.company) fields.push({ name: 'company', value: data.company });
   if (data.industry) fields.push({ name: 'industry', value: data.industry });
   if (data.summary) fields.push({ name: 'message', value: data.summary });
+  if (data.reportURL) fields.push({ name: 'workforce_planning', value: data.reportURL });
 
   const payload = {
     fields: fields,
@@ -3054,6 +3099,26 @@ async function submitToHubSpot(data) {
   });
 }
 
+function buildReportURL(snap) {
+  // Package the _snap data into a compact object for the URL
+  const data = {
+    r: snap.role, i: snap.industry, s: snap.salary, rt: snap.rate,
+    m: snap.months, hrs: snap.hrs, mh: snap.minHrs, mo: snap.mode,
+    st: snap.stateLabel,
+    dT: Math.round(snap.dTotal), dA: Math.round(snap.dAnnual),
+    sp: Math.round(snap.salaryPro), tx: Math.round(snap.taxTotal),
+    ha: Math.round(snap.healthAmt), k4: Math.round(snap.k401),
+    pt: Math.round(snap.ptoAmt), it: Math.round(snap.itAmt),
+    rc: Math.round(snap.recruitAmt), rp: Math.round(snap.rampCost),
+    bc: Math.round(snap.bonusCost||0), de: snap.dEhr, rl: snap.rampLabel,
+    cT: Math.round(snap.cTotal), ce: snap.cEhr,
+    ch: snap.cHeading||'', dl: Math.round(snap.delta), xm: snap.xMo
+  };
+  const json = JSON.stringify(data);
+  const encoded = btoa(unescape(encodeURIComponent(json)));
+  return 'https://mikestobbe3-sys.github.io/Workforce-Planner/workforce_cost_planner.html?report=' + encodeURIComponent(encoded);
+}
+
 async function submitEmailCapture() {
   const email = $('captureEmail').value.trim();
   const errEl = $('emailError');
@@ -3084,6 +3149,9 @@ async function submitEmailCapture() {
   btnText.textContent = 'Preparing your report…';
   spinner.style.display = 'block';
 
+  // Build the shareable report URL
+  const reportURL = buildReportURL(_snap);
+
   // Submit to HubSpot (fire and forget)
   const hubData = {
     email: email,
@@ -3091,18 +3159,14 @@ async function submitEmailCapture() {
     lastName: $('captureLast').value.trim(),
     company: $('captureCompany').value.trim(),
     industry: $('projectIndustry').value,
-    summary: buildCalculatorSummary()
+    summary: buildCalculatorSummary(),
+    reportURL: reportURL
   };
   submitToHubSpot(hubData);
 
-  // Show loading state in the report window while narrative generates
-  if (reportWindow) {
-    reportWindow.document.write('<html><head><title>Generating Report...</title></head><body style="font-family:Segoe UI,sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;background:#f5f3f0;"><div style="text-align:center;"><div style="font-size:28px;margin-bottom:16px;">📊</div><div style="font-size:16px;font-weight:700;color:#231F20;">Generating Your Report</div><div style="font-size:13px;color:#888;margin-top:8px;">Researching compensation data and building analysis...</div></div></body></html>');
-  }
-
   // Generate the PDF report into the already-opened window
   try {
-    const narrative = await fetchNarrative(_snap);
+    const narrative = fetchNarrative(_snap);
     buildPDF(_snap, narrative, reportWindow);
   } catch (e) {
     console.error('Report generation error:', e);
@@ -3120,6 +3184,45 @@ async function submitEmailCapture() {
 document.addEventListener('keydown', function(e) {
   if (e.key === 'Escape' && $('emailModal').classList.contains('open')) closeEmailModal();
 });
+
+// ══════════════════════════════════════════════════
+// ── REPORT VIEWER MODE ──
+// If URL contains ?report=, render the report instead of the calculator
+// ══════════════════════════════════════════════════
+(function() {
+  const params = new URLSearchParams(window.location.search);
+  const encoded = params.get('report');
+  if (!encoded) return;
+
+  let d;
+  try {
+    const json = decodeURIComponent(escape(atob(decodeURIComponent(encoded))));
+    d = JSON.parse(json);
+  } catch (e) {
+    document.body.innerHTML = '<div style="text-align:center;padding:60px;font-family:sans-serif;"><h2>Report Not Found</h2><p>This link does not contain valid report data. Please generate a new report from the calculator.</p></div>';
+    return;
+  }
+
+  // Rebuild _snap format from compact URL data
+  const snap = {
+    role: d.r, industry: d.i, salary: d.s, rate: d.rt,
+    months: d.m, hrs: d.hrs, minHrs: d.mh, mode: d.mo,
+    stateLabel: d.st,
+    dTotal: d.dT, dAnnual: d.dA, salaryPro: d.sp, taxTotal: d.tx,
+    healthAmt: d.ha, k401: d.k4, ptoAmt: d.pt, itAmt: d.it,
+    recruitAmt: d.rc, rampCost: d.rp, bonusCost: d.bc,
+    dEhr: d.de, rampLabel: d.rl,
+    cTotal: d.cT, cEhr: d.ce, cHeading: d.ch,
+    delta: d.dl, xMo: d.xm
+  };
+
+  // Hide the calculator
+  document.querySelector('.wrapper').style.display = 'none';
+
+  // Generate narrative and build report in the current page
+  const narrative = fetchNarrative(snap);
+  buildPDF(snap, narrative, { document: document, isEmbedded: true });
+})();
 
 
 </script>
