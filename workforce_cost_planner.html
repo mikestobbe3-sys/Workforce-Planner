@@ -3084,7 +3084,7 @@ function fetchNarrative(s) {
   research += 'Compare the proposed bill rate of $'+s.rate+'/hr against current market data for comparable '+roleName+' roles in '+stateClean+' using job boards (LinkedIn, Indeed, Glassdoor), industry compensation surveys'+(ind ? ' specific to '+ind : '')+', and staffing agency rate cards. ';
   research += highSalary ? 'At the $'+s.salary.toLocaleString()+' level, explore whether a contract-to-hire arrangement could preserve flexibility while building toward permanent employment. Retained search or executive placement firms may yield a stronger candidate pool. Review existing vendor partnerships for negotiated rates or volume discounts.' : 'Discuss with your finance team whether the '+s.months+'-month engagement fits within the current budget cycle or if phased commitments would be practical. Review existing vendor agreements or preferred staffing partnerships for favorable rates or pre-vetted talent pools.';
   research += '\n\nFinally, synthesize the internal and external analyses to determine which employment model best aligns with your organization\'s strategic workforce plan. The financial comparison provides the quantitative foundation, but the qualitative factors identified in this assessment, including pay equity impact, succession risk, talent market conditions, and regulatory environment, should carry equal weight in the final decision.';
-  research += '\n\nHow Main Line Talent Group Can Help: The research agenda outlined above can be time-consuming to execute internally, and many organizations lack access to the compensation data, market intelligence, and benchmarking tools needed to make these assessments with confidence. Main Line Talent Group provides compensation benchmarking, talent market analysis, and workforce planning consulting as part of our engagement process. Whether you need help validating salary ranges, evaluating contractor rate competitiveness, assessing your internal pay equity position, or building a strategic workforce plan, our team can provide the data and expertise to support your decision. Schedule a consultation at mainlinetalent.com/scheduling to discuss your specific needs.';
+  research += '\n\nHow Main Line Talent Group Can Help: The research agenda outlined above reflects the work of a strategic HRBP, and we know it can be difficult to execute alongside your day-to-day responsibilities. Main Line Talent Group partners with employers to provide the market intelligence and workforce consulting that makes these decisions easier. We offer compensation benchmarking against real market data, talent availability assessments, pay equity analysis support, and strategic workforce planning guidance. More importantly, we take the time to understand your business, your culture, and your goals so that every recommendation we make is grounded in your reality, not just the numbers. Schedule a conversation at mainlinetalent.com/scheduling and let us show you what a true workforce planning partnership looks like.';
 
   return compBenchmark+'\n\n'+directProsCons+'\n\n'+contractorProsCons+'\n\n'+industryContext+'\n\n'+risks+'\n\n'+research;
 }
@@ -3108,6 +3108,33 @@ function buildPDF(s, narrative, w) {
     {key:'POTENTIAL RISKS TO CONSIDER', color:'#b45014'},
     {key:'STRATEGIC ASSESSMENT FRAMEWORK', color:'#231F20'},
   ];
+  // Helper: auto-link emails and URLs in text
+  function linkify(text) {
+    return text
+      .replace(/([a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,})/g, '<a href="mailto:$1" style="color:#2C5E79;text-decoration:underline;">$1</a>')
+      .replace(/(mainlinetalent\.com\/scheduling)/g, '<a href="https://www.$1" target="_blank" style="color:#2C5E79;text-decoration:underline;">$1</a>');
+  }
+
+  // PESTLE letter definitions
+  const pestleLetters = [
+    { letter: 'P', word: 'Political', color: '#1a3a5c' },
+    { letter: 'E', word: 'Economic', color: '#2C5E79' },
+    { letter: 'S', word: 'Social', color: '#5b4a8a' },
+    { letter: 'T', word: 'Technological', color: '#2d7a4f' },
+    { letter: 'L', word: 'Legal', color: '#b45014' },
+    { letter: 'E', word: 'Environmental', color: '#3a7a5c' },
+  ];
+
+  // Map sub-header prefixes to PESTLE letters
+  const pestleMap = {
+    'Political and Regulatory': 0,
+    'Economic Factors': 1,
+    'Social and Workforce Trends': 2,
+    'Technological Drivers': 3,
+    'Legal Considerations': 4,
+    'Environmental Factors': 5,
+  };
+
   let sectionHTML = '';
   sectionDefs.forEach((sec,idx) => {
     const nextKey = idx < sectionDefs.length-1 ? sectionDefs[idx+1].key : null;
@@ -3116,17 +3143,29 @@ function buildPDF(s, narrative, w) {
     const end = nextKey ? narrative.indexOf(nextKey) : narrative.length;
     const body = narrative.slice(start+sec.key.length, end!==-1?end:undefined).trim();
     const paragraphs = body.split(/\n\n+/).filter(p => p.trim());
+    const isPestle = sec.key.indexOf('PESTLE') !== -1;
+
     const parasHTML = paragraphs.map(p => {
       const t = p.trim();
-      // Check for sub-headers like "Political and Regulatory: ..." or "Internal Analysis:"
       const subMatch = t.match(/^([A-Z][A-Za-z &,\/\-]+(?:\([A-Z]+\))?):[\s\n]/);
       if (subMatch) {
         const label = subMatch[1];
-        const rest = t.slice(subMatch[0].length).trim();
-        return '<p style="font-size:10.5px;color:#333;line-height:1.7;margin:12px 0 0 0;"><strong style="color:#231F20;">'+label+':</strong> '+rest+'</p>';
+        const rest = linkify(t.slice(subMatch[0].length).trim());
+        const pestleIdx = pestleMap[label];
+
+        if (isPestle && pestleIdx !== undefined) {
+          const pl = pestleLetters[pestleIdx];
+          return '<div style="display:flex;gap:12px;margin:14px 0 0 0;align-items:flex-start;">'
+            + '<div style="flex-shrink:0;width:36px;height:36px;background:'+pl.color+';color:#fff;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;letter-spacing:0;">'+pl.letter+'</div>'
+            + '<div style="flex:1;"><div style="font-size:9px;font-weight:700;color:'+pl.color+';text-transform:uppercase;letter-spacing:0.1em;margin-bottom:2px;">'+pl.word+'</div>'
+            + '<p style="font-size:10.5px;color:#333;line-height:1.7;margin:0;">'+rest+'</p></div></div>';
+        }
+
+        return '<p style="font-size:10.5px;color:#333;line-height:1.7;margin:12px 0 0 0;"><strong style="color:#231F20;">'+label+':</strong> '+linkify(rest)+'</p>';
       }
-      return '<p style="font-size:10.5px;color:#333;line-height:1.7;margin:8px 0 0 0;">'+t+'</p>';
+      return '<p style="font-size:10.5px;color:#333;line-height:1.7;margin:8px 0 0 0;">'+linkify(t)+'</p>';
     }).join('');
+
     sectionHTML += '<div style="background:'+sec.color+';color:#fff;padding:6px 14px;border-radius:4px;font-size:10px;font-weight:700;letter-spacing:0.08em;margin-top:18px;">'+sec.key+'</div>'+parasHTML;
   });
 
@@ -3168,7 +3207,17 @@ function buildPDF(s, narrative, w) {
     + '<div style="page-break-before:always;"></div><div class="header" style="margin-top:0;"><div class="header-left">MAIN LINE TALENT GROUP</div><div class="header-right">Workforce Cost Planner \u00b7 '+dateStr+'</div></div><div class="red-bar"></div>'
     + '<div class="section-heading">Analysis &amp; Recommendations</div><div class="section-rule"></div>'
     + sectionHTML
-    + '<div class="cta-box"><h3>Your Workforce Planning Partner</h3><p>Main Line Talent Group is more than a staffing agency. We are a workforce planning and talent management partner helping organizations make smarter hiring decisions through compensation benchmarking, market analysis, and strategic workforce consulting. Whether you need a single contractor or a comprehensive workforce strategy, we bring the data, expertise, and talent network to help you execute with confidence.</p><div style="margin-top:14px;"><a href="https://www.mainlinetalent.com/scheduling" target="_blank" style="display:inline-block;background:#EB1C24;color:#fff;padding:10px 24px;border-radius:5px;font-size:11px;font-weight:700;text-decoration:none;letter-spacing:0.03em;">Schedule a Consultation</a></div><div style="margin-top:10px;"><span style="color:#4C9CC9;font-weight:700;font-size:10px;">support@mainlinetalent.com</span><span style="color:#666;font-size:9px;margin-left:12px;">mainlinetalent.com</span></div></div>'
+    + '<div class="cta-box" style="background:#231F20;border-radius:6px;padding:22px 26px;margin-top:28px;border-left:4px solid #EB1C24;">'
+    + '<h3 style="color:#fff;font-size:15px;margin-bottom:10px;font-weight:800;">Let\u2019s Build Your Workforce Strategy Together</h3>'
+    + '<p style="color:#b4c4d2;font-size:10px;line-height:1.7;margin-bottom:6px;">This report highlights areas that deserve deeper investigation \u2014 compensation benchmarking, talent market analysis, pay equity, succession planning, and regulatory compliance. These are exactly the challenges Main Line Talent Group helps employers solve every day.</p>'
+    + '<p style="color:#b4c4d2;font-size:10px;line-height:1.7;margin-bottom:6px;">We\u2019re not just a staffing firm. We\u2019re a workforce planning and talent management partner. We\u2019d love to learn more about your business, your team, and your goals \u2014 so we can bring you the market intelligence, candidate insights, and strategic guidance that turns this analysis into action.</p>'
+    + '<p style="color:#e0d6cc;font-size:10.5px;font-weight:700;margin-bottom:14px;">Whether you\u2019re ready to hire or still exploring options, a 15-minute conversation can make the difference.</p>'
+    + '<div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">'
+    + '<a href="https://www.mainlinetalent.com/scheduling" target="_blank" style="display:inline-block;background:#EB1C24;color:#fff;padding:11px 28px;border-radius:5px;font-size:11px;font-weight:700;text-decoration:none;letter-spacing:0.03em;">Schedule a Consultation \u2192</a>'
+    + '<a href="mailto:support@mainlinetalent.com" style="display:inline-block;background:transparent;color:#4C9CC9;padding:11px 20px;border-radius:5px;font-size:11px;font-weight:700;text-decoration:none;border:1px solid #4C9CC9;">support@mainlinetalent.com</a>'
+    + '</div>'
+    + '<div style="margin-top:12px;color:#666;font-size:8.5px;">mainlinetalent.com  \u00b7  Workforce Planning  \u00b7  Talent Management  \u00b7  Compensation Benchmarking</div>'
+    + '</div>'
     + '<div class="footer">Main Line Talent Group  \u00b7  Workforce Cost Planner  \u00b7  For Discussion Purposes Only</div>'
     + '</div></body></html>';
 
