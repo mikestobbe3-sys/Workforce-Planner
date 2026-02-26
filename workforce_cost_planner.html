@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -15,9 +14,12 @@
 <meta property="og:description" content="Compare the true cost of hiring a direct employee versus engaging a contractor. Free calculator with industry-specific PESTLE analysis, compensation benchmarking, and a personalized PDF report.">
 <meta property="og:url" content="https://www.mainlinetalent.com/resources/workforceplanningcalculator">
 <meta property="og:site_name" content="Main Line Talent Group">
+<meta property="og:image" content="https://www.mainlinetalent.com/resources/workforceplanningcalculator/og-preview.png">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Workforce Planning Calculator | Direct Hire vs Contractor | Main Line Talent Group">
 <meta name="twitter:description" content="Free calculator comparing true hiring costs: W-2 employee vs contractor. Includes taxes, benefits, recruiting, ramp costs, and industry-specific PESTLE analysis.">
+<meta name="twitter:image" content="https://www.mainlinetalent.com/resources/workforceplanningcalculator/og-preview.png">
+<meta name="theme-color" content="#231F20">
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"WebApplication","name":"Workforce Planning Calculator","description":"Free workforce cost calculator comparing direct W-2 hire vs contractor costs.","url":"https://www.mainlinetalent.com/resources/workforceplanningcalculator","applicationCategory":"BusinessApplication","operatingSystem":"Any","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"creator":{"@type":"Organization","name":"Main Line Talent Group","url":"https://www.mainlinetalent.com"}}
 </script>
@@ -117,6 +119,17 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
 .verdict-bar.dw{background:var(--green);}
 .verdict-bar .big{font-size:1.05em;}
 .verdict-bar .sm{font-size:0.78em;opacity:0.85;margin-top:4px;font-weight:400;}
+.recommendation-box{background:#fff;border:1px solid var(--border);border-radius:var(--r);margin-bottom:16px;overflow:hidden;}
+.recommendation-box .rec-header{padding:12px 16px;font-weight:700;font-size:0.82em;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;}
+.recommendation-box .rec-body{padding:14px 16px;font-size:0.82em;line-height:1.65;color:#444;}
+.recommendation-box .rec-body p{margin-bottom:10px;}
+.recommendation-box .rec-body p:last-child{margin-bottom:0;}
+.recommendation-box .rec-highlight{background:#fef9e7;border-left:3px solid var(--amber);padding:10px 14px;border-radius:0 6px 6px 0;margin:10px 0;font-size:0.95em;}
+.recommendation-box .rec-highlight.green{background:#e8f5ee;border-left-color:var(--green);}
+.recommendation-box .rec-factors{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;}
+.recommendation-box .rec-factor{background:var(--bg);padding:6px 12px;border-radius:20px;font-size:0.88em;font-weight:600;color:var(--dark);}
+.verdict-bar.one-clear{background:var(--amber);}
+.verdict-bar.one-clear .sm{opacity:1;font-weight:600;}
 .report-cta{background:var(--dark);border-radius:var(--r);padding:24px;border-left:4px solid var(--red);margin-top:20px;}
 .fin-stmt{width:100%;border-collapse:collapse;font-size:0.82em;}
 .fin-stmt th{text-align:right;padding:8px 12px;font-weight:700;font-size:0.72em;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);background:#f9f8f7;border-bottom:2px solid var(--border);}
@@ -171,23 +184,37 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
 .q-confirm:hover{background:#c4161d;}
 .q-confirm:disabled{background:var(--border);cursor:default;}
 
+@media(max-width:768px){
+  .brand-bar{flex-direction:column;align-items:flex-start;gap:10px;}
+  .progress-bar{gap:1px;}
+  .progress-dot{padding:6px 2px;}
+  .progress-dot .prog-title{font-size:0.48em;}
+  .progress-dot .prog-num{font-size:0.55em;}
+}
 @media(max-width:520px){
-html,body{overflow-x:hidden;width:100%;}
-.wizard-shell{padding:16px 20px 60px;}
-.step-title{font-size:1.3em;}
-.field-row{flex-direction:column;gap:0;}
-.result-cards{flex-direction:column;}
-.lp-col-value{font-size:1.1em;}
-.email-modal{max-width:100%;border-radius:8px;}
-.email-modal-header{padding:18px 18px 14px;}
-.email-modal-body{padding:16px 18px 18px;}
-.q-header{padding:12px 14px;}
-.q-title{font-size:0.82em;}
-.fin-stmt{min-width:380px;}
-.fin-stmt th,.fin-stmt td{padding:6px 8px;font-size:0.75em;}
+  html,body{overflow-x:hidden;width:100%;}
+  .wizard-shell{padding:16px 20px 60px;}
+  .step-title{font-size:1.3em;}
+  .field-row{flex-direction:column;gap:0;}
+  .result-cards{flex-direction:column;}
+  .lp-col-value{font-size:1.1em;}
+  .email-modal{max-width:100%;border-radius:8px;}
+  .email-modal-header{padding:18px 18px 14px;}
+  .email-modal-body{padding:16px 18px 18px;}
+  .q-header{padding:12px 14px;}
+  .q-title{font-size:0.82em;}
+  .fin-stmt{min-width:380px;}
+  .fin-stmt th,.fin-stmt td{padding:6px 8px;font-size:0.75em;}
+  .brand-logo-wrap img.brand-logo{height:48px;}
+  .progress-dot .prog-title{display:none;}
+  .progress-dot .prog-num{font-size:0.65em;}
+  .progress-dot{padding:8px 4px;}
+  .nav-row{flex-direction:column;gap:8px;}
+  .nav-row .btn{width:100%;}
+  .choices{gap:6px;}
+  .choice{padding:10px 12px;}
 }
 </style>
-
 </head>
 <body>
 
@@ -207,11 +234,10 @@ html,body{overflow-x:hidden;width:100%;}
   </div>
 
   <!-- STEP 1: Welcome -->
-
   <div class="step active" id="step1">
     <div class="step-label">Step 1 of 5</div>
-    <div class="step-title" style="font-size:1.35em;margin-bottom:4px;">What brings you here today?</div>
-    <div class="step-desc" style="margin-bottom:14px;">We'll calculate the true cost of hiring &mdash; taxes, benefits, recruiting, and ramp time &mdash; so you can compare your options.</div>
+    <div class="step-title" style="font-size:1.35em;margin-bottom:4px;">How can we help?</div>
+    <div class="step-desc" style="margin-bottom:14px;">This tool calculates the true cost of hiring, including taxes, benefits, recruiting, and ramp time, so you can compare your options with confidence.</div>
     <div class="choices" id="intentChoices" style="gap:8px;">
       <div class="choice" data-val="perm" onclick="selectChoice('intent',this)" style="padding:12px 14px;">
         <div class="choice-icon"><span>👤</span></div>
@@ -225,7 +251,7 @@ html,body{overflow-x:hidden;width:100%;}
       </div>
       <div class="choice" data-val="compare" onclick="selectChoice('intent',this)" style="padding:12px 14px;">
         <div class="choice-icon"><span>⚖️</span></div>
-        <div class="choice-text"><strong>Not sure yet &mdash; help me compare</strong><small>See both options side by side</small></div>
+        <div class="choice-text"><strong>Not sure yet. Help me compare</strong><small>See both options side by side</small></div>
         <div class="choice-check"></div>
       </div>
     </div>
@@ -233,313 +259,345 @@ html,body{overflow-x:hidden;width:100%;}
   </div>
 
   <!-- STEP 2: Role Details -->
-
   <div class="step" id="step2">
     <div class="step-label">Step 2 of 5</div>
     <div class="step-title" style="font-size:1.35em;margin-bottom:4px;">Tell us about the role.</div>
-    <div class="step-desc" style="margin-bottom:14px;">This helps us tailor the cost analysis and provide industry-specific insights in your report.</div>
+    <div class="step-desc" style="margin-bottom:14px;">This information tailors the cost analysis and provides industry-specific insights in your report.</div>
 
-```
-<div class="q-section q-open" id="q2-industry">
-  <div class="q-header" onclick="toggleQ(this)">
-    <div class="q-check"></div>
-    <div class="q-title">Industry</div>
-    <div class="q-chevron">▼</div>
-  </div>
-  <div class="q-body"><div class="q-body-inner">
-    <div class="field" style="margin-bottom:0;"><label>What industry is this role in? *</label>
-      <select id="wIndustry" onchange="checkStep2();if(this.value)confirmQ('q2-industry','q2-role',function(){return true;})">
-        <option value="">Select your industry</option>
-        <option>Aerospace & Defense</option><option>Automotive</option><option>Construction & Engineering</option><option>Distribution & Logistics</option><option>Education</option><option>Energy & Utilities</option><option>Financial Services</option><option>Food & Beverage</option><option>Government & Public Sector</option><option>Healthcare</option><option>Manufacturing</option><option>Nonprofit</option><option>Pharma & Life Sciences</option><option>Professional Services</option><option>Real Estate</option><option>Retail & E-commerce</option><option>Technology</option><option>Other</option>
-      </select>
+    <div class="q-section q-open" id="q2-industry">
+      <div class="q-header" onclick="toggleQ(this)">
+        <div class="q-check"></div>
+        <div class="q-title">Industry</div>
+        <div class="q-chevron">▼</div>
+      </div>
+      <div class="q-body"><div class="q-body-inner">
+        <div class="field" style="margin-bottom:0;"><label>Industry *</label>
+          <select id="wIndustry" onchange="checkStep2();if(this.value)confirmQ('q2-industry','q2-role',function(){return true;})">
+            <option value="">Select your industry</option>
+            <option>Aerospace & Defense</option><option>Automotive</option><option>Construction & Engineering</option><option>Distribution & Logistics</option><option>Education</option><option>Energy & Utilities</option><option>Financial Services</option><option>Food & Beverage</option><option>Government & Public Sector</option><option>Healthcare</option><option>Manufacturing</option><option>Nonprofit</option><option>Pharma & Life Sciences</option><option>Professional Services</option><option>Real Estate</option><option>Retail & E-commerce</option><option>Technology</option><option>Other</option>
+          </select>
+        </div>
+      </div></div>
     </div>
-  </div></div>
-</div>
 
-<div class="q-section" id="q2-role">
-  <div class="q-header" onclick="toggleQ(this)">
-    <div class="q-check"></div>
-    <div class="q-title">Job Title / Role</div>
-    <div class="q-chevron">▼</div>
-  </div>
-  <div class="q-body"><div class="q-body-inner">
-    <div class="field" style="margin-bottom:0;"><label>What is the job title? *</label>
-      <input type="text" id="wRole" placeholder="e.g. Epicor Kinetic Developer, Acumatica Consultant, IT Manager" oninput="checkStep2()">
+    <div class="q-section" id="q2-role">
+      <div class="q-header" onclick="toggleQ(this)">
+        <div class="q-check"></div>
+        <div class="q-title">Job Title / Role</div>
+        <div class="q-chevron">▼</div>
+      </div>
+      <div class="q-body"><div class="q-body-inner">
+        <div class="field" style="margin-bottom:0;"><label>Job title *</label>
+          <input type="text" id="wRole" placeholder="e.g. Epicor Kinetic Developer, Acumatica Consultant, IT Manager" oninput="checkStep2()">
+        </div>
+        <button class="q-confirm" onclick="confirmQ('q2-role','q2-state',function(){return $('wRole').value.trim();})">Confirm</button>
+      </div></div>
     </div>
-    <button class="q-confirm" onclick="confirmQ('q2-role','q2-state',function(){return $('wRole').value.trim();})">Confirm</button>
-  </div></div>
-</div>
 
-<div class="q-section" id="q2-state">
-  <div class="q-header" onclick="toggleQ(this)">
-    <div class="q-check"></div>
-    <div class="q-title">Worker Location</div>
-    <div class="q-chevron">▼</div>
-  </div>
-  <div class="q-body"><div class="q-body-inner">
-    <div class="field"><label>State where the worker will reside *</label>
-      <select id="wState" onchange="checkStep2();if(this.value)confirmQ('q2-state','q2-start',function(){return true;})">
-        <option value="">Select state</option>
-        <option value="AL-2.70-8000-0">Alabama</option><option value="AK-1.00-47600-0">Alaska</option><option value="AZ-2.00-8000-0">Arizona</option><option value="AR-3.10-10000-0">Arkansas</option><option value="CA-3.40-7000-0.01">California</option><option value="CO-1.70-20400-0">Colorado</option><option value="CT-3.00-15000-0">Connecticut</option><option value="DE-1.80-10500-0.0014">Delaware</option><option value="FL-2.70-7000-0">Florida</option><option value="GA-2.64-9500-0">Georgia</option><option value="HI-4.00-51600-0">Hawaii</option><option value="ID-1.00-46500-0">Idaho</option><option value="IL-3.175-12960-0">Illinois</option><option value="IN-2.50-9500-0">Indiana</option><option value="IA-1.00-36100-0">Iowa</option><option value="KS-2.70-14000-0">Kansas</option><option value="KY-2.70-11100-0">Kentucky</option><option value="LA-1.60-7700-0">Louisiana</option><option value="ME-2.17-12000-0">Maine</option><option value="MD-2.30-8500-0">Maryland</option><option value="MA-1.87-15000-0.00756">Massachusetts</option><option value="MI-2.70-9500-0">Michigan</option><option value="MN-1.00-40000-0">Minnesota</option><option value="MS-2.70-14000-0">Mississippi</option><option value="MO-2.51-10500-0">Missouri</option><option value="MT-1.18-40500-0">Montana</option><option value="NE-1.25-9000-0">Nebraska</option><option value="NV-2.95-40600-0">Nevada</option><option value="NH-1.70-14000-0">New Hampshire</option><option value="NJ-2.80-42300-0.003825">New Jersey</option><option value="NM-2.00-30800-0">New Mexico</option><option value="NY-4.025-12500-0">New York</option><option value="NC-1.00-29600-0">North Carolina</option><option value="ND-1.02-40800-0">North Dakota</option><option value="OH-2.70-9000-0">Ohio</option><option value="OK-1.50-25700-0">Oklahoma</option><option value="OR-2.40-52000-0">Oregon</option><option value="PA-3.68-10000-0">Pennsylvania</option><option value="RI-1.10-28200-0.011">Rhode Island</option><option value="SC-2.64-14000-0">South Carolina</option><option value="SD-1.00-15000-0">South Dakota</option><option value="TN-2.70-7000-0">Tennessee</option><option value="TX-2.70-9000-0">Texas</option><option value="UT-2.30-44800-0">Utah</option><option value="VT-1.00-16100-0">Vermont</option><option value="VA-2.50-8000-0">Virginia</option><option value="WA-1.03-72500-0.0058">Washington</option><option value="WV-2.70-12000-0">West Virginia</option><option value="WI-3.05-14000-0">Wisconsin</option><option value="WY-1.00-30100-0">Wyoming</option><option value="DC-2.70-9000-0">Washington DC</option>
-      </select>
+    <div class="q-section" id="q2-state">
+      <div class="q-header" onclick="toggleQ(this)">
+        <div class="q-check"></div>
+        <div class="q-title">Worker Location</div>
+        <div class="q-chevron">▼</div>
+      </div>
+      <div class="q-body"><div class="q-body-inner">
+        <div class="field"><label>State of residence *</label>
+          <select id="wState" onchange="checkStep2();if(this.value)confirmQ('q2-state','q2-start',function(){return true;})">
+            <option value="">Select state</option>
+            <option value="AL-2.70-8000-0">Alabama</option><option value="AK-1.00-47600-0">Alaska</option><option value="AZ-2.00-8000-0">Arizona</option><option value="AR-3.10-10000-0">Arkansas</option><option value="CA-3.40-7000-0.01">California</option><option value="CO-1.70-20400-0">Colorado</option><option value="CT-3.00-15000-0">Connecticut</option><option value="DE-1.80-10500-0.0014">Delaware</option><option value="FL-2.70-7000-0">Florida</option><option value="GA-2.64-9500-0">Georgia</option><option value="HI-4.00-51600-0">Hawaii</option><option value="ID-1.00-46500-0">Idaho</option><option value="IL-3.175-12960-0">Illinois</option><option value="IN-2.50-9500-0">Indiana</option><option value="IA-1.00-36100-0">Iowa</option><option value="KS-2.70-14000-0">Kansas</option><option value="KY-2.70-11100-0">Kentucky</option><option value="LA-1.60-7700-0">Louisiana</option><option value="ME-2.17-12000-0">Maine</option><option value="MD-2.30-8500-0">Maryland</option><option value="MA-1.87-15000-0.00756">Massachusetts</option><option value="MI-2.70-9500-0">Michigan</option><option value="MN-1.00-40000-0">Minnesota</option><option value="MS-2.70-14000-0">Mississippi</option><option value="MO-2.51-10500-0">Missouri</option><option value="MT-1.18-40500-0">Montana</option><option value="NE-1.25-9000-0">Nebraska</option><option value="NV-2.95-40600-0">Nevada</option><option value="NH-1.70-14000-0">New Hampshire</option><option value="NJ-2.80-42300-0.003825">New Jersey</option><option value="NM-2.00-30800-0">New Mexico</option><option value="NY-4.025-12500-0">New York</option><option value="NC-1.00-29600-0">North Carolina</option><option value="ND-1.02-40800-0">North Dakota</option><option value="OH-2.70-9000-0">Ohio</option><option value="OK-1.50-25700-0">Oklahoma</option><option value="OR-2.40-52000-0">Oregon</option><option value="PA-3.68-10000-0">Pennsylvania</option><option value="RI-1.10-28200-0.011">Rhode Island</option><option value="SC-2.64-14000-0">South Carolina</option><option value="SD-1.00-15000-0">South Dakota</option><option value="TN-2.70-7000-0">Tennessee</option><option value="TX-2.70-9000-0">Texas</option><option value="UT-2.30-44800-0">Utah</option><option value="VT-1.00-16100-0">Vermont</option><option value="VA-2.50-8000-0">Virginia</option><option value="WA-1.03-72500-0.0058">Washington</option><option value="WV-2.70-12000-0">West Virginia</option><option value="WI-3.05-14000-0">Wisconsin</option><option value="WY-1.00-30100-0">Wyoming</option><option value="DC-2.70-9000-0">Washington DC</option>
+          </select>
+        </div>
+        <div class="field" style="margin-bottom:0;">
+          <label style="display:flex;align-items:center;gap:10px;cursor:pointer;text-transform:none;letter-spacing:0;font-size:0.88em;font-weight:600;color:var(--dark);">
+            <input type="checkbox" id="wRemote" onchange="onRemoteToggle();if(this.checked)confirmQ('q2-state','q2-start',function(){return true;})" style="width:18px;height:18px;accent-color:var(--dark);cursor:pointer;">
+            This role is fully remote
+          </label>
+          <div id="remoteNotice" style="display:none;font-size:0.78em;color:var(--blue);margin-top:6px;padding:8px 12px;background:#f0f4f7;border-radius:6px;">Costs will be calculated using national averages since the worker location may vary.</div>
+        </div>
+      </div></div>
     </div>
-    <div class="field" style="margin-bottom:0;">
-      <label style="display:flex;align-items:center;gap:10px;cursor:pointer;text-transform:none;letter-spacing:0;font-size:0.88em;font-weight:600;color:var(--dark);">
-        <input type="checkbox" id="wRemote" onchange="onRemoteToggle();if(this.checked)confirmQ('q2-state','q2-start',function(){return true;})" style="width:18px;height:18px;accent-color:var(--dark);cursor:pointer;">
-        This role is fully remote
-      </label>
-      <div id="remoteNotice" style="display:none;font-size:0.78em;color:var(--blue);margin-top:6px;padding:8px 12px;background:#f0f4f7;border-radius:6px;">Costs will be calculated using national averages since the worker location may vary.</div>
+
+    <div class="q-section" id="q2-start">
+      <div class="q-header" onclick="toggleQ(this)">
+        <div class="q-check"></div>
+        <div class="q-title">Anticipated Start Date</div>
+        <div class="q-chevron">▼</div>
+      </div>
+      <div class="q-body"><div class="q-body-inner">
+        <div class="field"><label>Expected start date *</label>
+          <input type="date" id="wStartDate" onchange="checkStep2();if(this.value)confirmQ('q2-start',null,function(){return $('wStartDate').value;})" style="max-width:240px;">
+          <div class="field-hint">Used to allocate costs by calendar year in the comparison</div>
+        </div>
+      </div></div>
     </div>
-  </div></div>
-</div>
 
-<div class="q-section" id="q2-start">
-  <div class="q-header" onclick="toggleQ(this)">
-    <div class="q-check"></div>
-    <div class="q-title">Anticipated Start Date</div>
-    <div class="q-chevron">▼</div>
-  </div>
-  <div class="q-body"><div class="q-body-inner">
-    <div class="field"><label>When do you expect this person to start? *</label>
-      <input type="date" id="wStartDate" onchange="checkStep2()" style="max-width:240px;">
-      <div class="field-hint">Used to break out costs by calendar year in your comparison</div>
+    <div class="nav-row">
+      <button class="btn btn-secondary" onclick="goStep(1)">← Back</button>
+      <button class="btn btn-primary" id="btn2next" onclick="goNextFromStep2()" disabled>Continue →</button>
     </div>
-    <button class="q-confirm" onclick="confirmQ('q2-start',null,function(){return $('wStartDate').value;})">Confirm</button>
-  </div></div>
-</div>
-
-<div class="nav-row">
-  <button class="btn btn-secondary" onclick="goStep(1)">← Back</button>
-  <button class="btn btn-primary" id="btn2next" onclick="goNextFromStep2()" disabled>Continue →</button>
-</div>
-```
-
   </div>
+
 
   <!-- STEP 3: Direct Hire Details -->
-
   <div class="step" id="step3">
     <div class="step-label" id="step3Label">Step 3 of 5</div>
     <div class="step-title" id="step3Title" style="font-size:1.35em;margin-bottom:4px;">Direct Hire Details</div>
-    <div class="step-desc" id="step3Desc" style="margin-bottom:14px;">What would it cost to bring this person on as a full-time W-2 employee?</div>
+    <div class="step-desc" id="step3Desc" style="margin-bottom:14px;">Enter the compensation details for this full-time W-2 position.</div>
 
-```
-<div class="q-section q-open" id="q3-salary">
-  <div class="q-header" onclick="toggleQ(this)">
-    <div class="q-check"></div>
-    <div class="q-title">Annual Salary</div>
-    <div class="q-chevron">▼</div>
-  </div>
-  <div class="q-body"><div class="q-body-inner">
-    <div class="field" style="margin-bottom:0;"><label>What is the annual salary for this role? *</label>
-      <input type="text" id="wSalary" placeholder="$100,000" oninput="formatCurrency(this);liveCalc()">
-    </div>
-    <button class="q-confirm" onclick="confirmQ('q3-salary','q3-recruit',function(){return parseCurrency($('wSalary').value)>0;})">Confirm</button>
-  </div></div>
-</div>
-
-<div class="q-section" id="q3-recruit">
-  <div class="q-header" onclick="toggleQ(this)">
-    <div class="q-check"></div>
-    <div class="q-title">Recruiting Method</div>
-    <div class="q-chevron">▼</div>
-  </div>
-  <div class="q-body"><div class="q-body-inner">
-    <div class="field" style="margin-bottom:12px;"><label>Will you use a recruiter or staffing agency?</label>
-      <div class="choices" id="recruitChoices" style="margin-top:8px;">
-        <div class="choice" data-val="yes" onclick="selectChoice('recruit',this)" style="padding:12px 14px;"><div class="choice-text"><strong>Yes</strong></div><div class="choice-check"></div></div>
-        <div class="choice" data-val="no" onclick="selectChoice('recruit',this);confirmQ('q3-recruit','q3-ramp',function(){return true;})" style="padding:12px 14px;"><div class="choice-text"><strong>No, hiring internally</strong></div><div class="choice-check"></div></div>
+    <div class="q-section q-open" id="q3-salary">
+      <div class="q-header" onclick="toggleQ(this)">
+        <div class="q-check"></div>
+        <div class="q-title">Annual Salary</div>
+        <div class="q-chevron">▼</div>
       </div>
+      <div class="q-body"><div class="q-body-inner">
+        <div class="field" style="margin-bottom:0;"><label>Annual base salary *</label>
+          <input type="text" id="wSalary" placeholder="$100,000" oninput="formatCurrency(this);liveCalc()">
+        </div>
+        <button class="q-confirm" onclick="confirmQ('q3-salary','q3-recruit',function(){return parseCurrency($('wSalary').value)>0;})">Confirm</button>
+      </div></div>
     </div>
-    <div id="recruitFeeBlock" style="display:none;">
-      <div class="field" style="margin-bottom:0;"><label>Recruitment Fee Percentage</label>
-        <div class="range-value" id="recruitFeeVal">30%</div>
-        <input type="range" id="wRecruitFee" min="15" max="50" value="30" oninput="document.getElementById('recruitFeeVal').textContent=this.value+'%';liveCalc()">
-        <div class="range-labels"><span>15%</span><span>50%</span></div>
-        <div class="field-hint">Industry average is 20-30% of first-year salary</div>
+
+    <div class="q-section" id="q3-recruit">
+      <div class="q-header" onclick="toggleQ(this)">
+        <div class="q-check"></div>
+        <div class="q-title">Recruiting Method</div>
+        <div class="q-chevron">▼</div>
       </div>
+      <div class="q-body"><div class="q-body-inner">
+        <div class="field" style="margin-bottom:12px;"><label>Will a recruiter or staffing agency be used?</label>
+          <div class="choices" id="recruitChoices" style="margin-top:8px;">
+            <div class="choice" data-val="yes" onclick="selectChoice('recruit',this)" style="padding:12px 14px;"><div class="choice-text"><strong>Yes</strong></div><div class="choice-check"></div></div>
+            <div class="choice" data-val="no" onclick="selectChoice('recruit',this);confirmQ('q3-recruit','q3-ramp',function(){return true;})" style="padding:12px 14px;"><div class="choice-text"><strong>No, hiring internally</strong></div><div class="choice-check"></div></div>
+          </div>
+        </div>
+        <div id="recruitFeeBlock" style="display:none;">
+          <div class="field" style="margin-bottom:0;"><label>Recruitment Fee Percentage</label>
+            <div class="range-value" id="recruitFeeVal">30%</div>
+            <input type="range" id="wRecruitFee" min="15" max="50" value="30" oninput="document.getElementById('recruitFeeVal').textContent=this.value+'%';debouncedCalc()">
+            <div class="range-labels"><span>15%</span><span>50%</span></div>
+            <div class="field-hint">Industry average ranges from 20% to 30% of first-year salary</div>
+          </div>
+        </div>
+        <button class="q-confirm" onclick="confirmQ('q3-recruit','q3-ramp',function(){return wizardData.useRecruiter!==null;})">Confirm</button>
+      </div></div>
     </div>
-    <button class="q-confirm" onclick="confirmQ('q3-recruit','q3-ramp',function(){return wizardData.useRecruiter!==null;})">Confirm</button>
-  </div></div>
-</div>
 
-<div class="q-section" id="q3-ramp">
-  <div class="q-header" onclick="toggleQ(this)">
-    <div class="q-check"></div>
-    <div class="q-title">Ramp-Up Speed</div>
-    <div class="q-chevron">▼</div>
-  </div>
-  <div class="q-body"><div class="q-body-inner">
-    <div class="field" style="margin-bottom:0;">
-      <label>How quickly would this person be fully productive? *</label>
-      <div class="choices" id="rampChoices" style="margin-top:8px;">
-        <div class="choice" data-val="fast" onclick="selectChoice('ramp',this);confirmQ('q3-ramp',null,function(){return true;})">
-          <div class="choice-icon" style="background:#e8f5ee;"><span style="filter:none;">🟢</span></div>
-          <div class="choice-text">
-            <strong>Fast: they can hit the ground running</strong>
-            <small>Technical roles, experienced hires, clear deliverables. ~4 week ramp.</small>
-          </div>
-          <div class="choice-check"></div>
-        </div>
-        <div class="choice" data-val="moderate" onclick="selectChoice('ramp',this);confirmQ('q3-ramp',null,function(){return true;})">
-          <div class="choice-icon" style="background:#fef9e7;"><span style="filter:none;">🟡</span></div>
-          <div class="choice-text">
-            <strong>Moderate: some learning curve</strong>
-            <small>Mid-level roles, some process knowledge needed. ~10 week ramp.</small>
-          </div>
-          <div class="choice-check"></div>
-        </div>
-        <div class="choice" data-val="significant" onclick="selectChoice('ramp',this);confirmQ('q3-ramp',null,function(){return true;})">
-          <div class="choice-icon" style="background:#fef0e6;"><span style="filter:none;">🟠</span></div>
-          <div class="choice-text">
-            <strong>Significant: they'll need to learn our processes</strong>
-            <small>Functional/consulting roles, cross-departmental, client-facing. ~16 week ramp.</small>
-          </div>
-          <div class="choice-check"></div>
-        </div>
-        <div class="choice" data-val="extended" onclick="selectChoice('ramp',this);confirmQ('q3-ramp',null,function(){return true;})">
-          <div class="choice-icon" style="background:#fde8e8;"><span style="filter:none;">🔴</span></div>
-          <div class="choice-text">
-            <strong>Extended: deep organizational knowledge required</strong>
-            <small>Leadership, change management, institutional expertise. ~26 week ramp.</small>
-          </div>
-          <div class="choice-check"></div>
-        </div>
+
+    <div class="q-section" id="q3-ramp">
+      <div class="q-header" onclick="toggleQ(this)">
+        <div class="q-check"></div>
+        <div class="q-title">Ramp-Up Speed</div>
+        <div class="q-chevron">▼</div>
       </div>
+      <div class="q-body"><div class="q-body-inner">
+        <div class="field" style="margin-bottom:0;">
+          <label>Expected time to full productivity *</label>
+          <div class="choices" id="rampChoices" style="margin-top:8px;">
+            <div class="choice" data-val="fast" onclick="selectChoice('ramp',this);confirmQ('q3-ramp','q3-benefits',function(){return true;})">
+              <div class="choice-icon" style="background:#e8f5ee;"><span style="filter:none;">🟢</span></div>
+              <div class="choice-text">
+                <strong>Fast: minimal onboarding required</strong>
+                <small>Experienced hires with clear deliverables. Approximately 4-week ramp.</small>
+              </div>
+              <div class="choice-check"></div>
+            </div>
+            <div class="choice" data-val="moderate" onclick="selectChoice('ramp',this);confirmQ('q3-ramp','q3-benefits',function(){return true;})">
+              <div class="choice-icon" style="background:#fef9e7;"><span style="filter:none;">🟡</span></div>
+              <div class="choice-text">
+                <strong>Moderate: some learning curve</strong>
+                <small>Some process and systems knowledge required. Approximately 10-week ramp.</small>
+              </div>
+              <div class="choice-check"></div>
+            </div>
+            <div class="choice" data-val="significant" onclick="selectChoice('ramp',this);confirmQ('q3-ramp','q3-benefits',function(){return true;})">
+              <div class="choice-icon" style="background:#fef0e6;"><span style="filter:none;">🟠</span></div>
+              <div class="choice-text">
+                <strong>Significant: requires learning your processes</strong>
+                <small>Cross-departmental or client-facing roles. Approximately 16-week ramp.</small>
+              </div>
+              <div class="choice-check"></div>
+            </div>
+            <div class="choice" data-val="extended" onclick="selectChoice('ramp',this);confirmQ('q3-ramp','q3-benefits',function(){return true;})">
+              <div class="choice-icon" style="background:#fde8e8;"><span style="filter:none;">🔴</span></div>
+              <div class="choice-text">
+                <strong>Extended: deep organizational knowledge required</strong>
+                <small>Leadership or roles requiring institutional expertise. Approximately 26-week ramp.</small>
+              </div>
+              <div class="choice-check"></div>
+            </div>
+          </div>
+        </div>
+      </div></div>
     </div>
-  </div></div>
-</div>
 
-<div class="nav-row">
-  <button class="btn btn-secondary" onclick="goBackFromStep3()">← Back</button>
-  <button class="btn btn-primary" id="btn3next" onclick="goNextFromStep3()" disabled>Continue →</button>
-</div>
-```
+    <div class="q-section" id="q3-benefits">
+      <div class="q-header" onclick="toggleQ(this)">
+        <div class="q-check"></div>
+        <div class="q-title">Additional Benefits <span style="font-weight:400;color:var(--muted);font-size:0.85em;">(Optional)</span></div>
+        <div class="q-chevron">▼</div>
+      </div>
+      <div class="q-body"><div class="q-body-inner">
+        <div class="field" style="margin-bottom:14px;">
+          <label>401(k) Employer Match</label>
+          <div style="display:flex;gap:8px;align-items:center;margin-top:6px;">
+            <input type="text" id="w401kPct" value="3" style="width:70px;text-align:center;padding:10px 8px;" oninput="liveCalc()">
+            <span style="font-size:0.85em;color:var(--muted);">% of salary</span>
+          </div>
+          <div class="field-hint">Default is 3%. Enter 0 if no employer match is offered.</div>
+        </div>
 
+        <div class="field" style="margin-bottom:14px;">
+          <label>Bonus / Incentive Compensation</label>
+          <select id="wBonusType" onchange="onBonusTypeChange();liveCalc()" style="margin-top:6px;">
+            <option value="none">No bonus</option>
+            <option value="onetime">One-time (e.g. sign-on)</option>
+            <option value="quarterly">Quarterly bonus</option>
+            <option value="annual">Annual bonus</option>
+          </select>
+        </div>
+
+        <div id="bonusDetailBlock" style="display:none;">
+          <div style="display:flex;gap:8px;align-items:flex-end;margin-bottom:6px;">
+            <div class="field" style="flex:1;margin-bottom:0;">
+              <label>Bonus Amount</label>
+              <input type="text" id="wBonusAmt" placeholder="5,000" oninput="formatCurrency(this);liveCalc()">
+            </div>
+            <div class="field" style="width:90px;margin-bottom:0;">
+              <label>Type</label>
+              <select id="wBonusUnit" onchange="liveCalc()">
+                <option value="dollar">$</option>
+                <option value="percent">%</option>
+              </select>
+            </div>
+          </div>
+          <div class="field-hint" id="bonusHint">Enter the bonus amount.</div>
+        </div>
+
+        <button class="q-confirm" onclick="confirmQ('q3-benefits',null,function(){return true;})">Confirm</button>
+      </div></div>
+    </div>
+
+    <div class="nav-row">
+      <button class="btn btn-secondary" onclick="goBackFromStep3()">← Back</button>
+      <button class="btn btn-primary" id="btn3next" onclick="goNextFromStep3()" disabled>Continue →</button>
+    </div>
   </div>
 
   <!-- STEP 4: Contractor Details -->
-
   <div class="step" id="step4">
     <div class="step-label" id="step4Label">Step 4 of 5</div>
     <div class="step-title" id="step4Title" style="font-size:1.35em;margin-bottom:4px;">Contractor Details</div>
     <div class="step-desc" id="step4Desc" style="margin-bottom:14px;">What would the contractor engagement look like for this role?</div>
 
-```
-<div class="q-section q-open" id="q4-rate">
-  <div class="q-header" onclick="toggleQ(this)">
-    <div class="q-check"></div>
-    <div class="q-title">Bill Rate</div>
-    <div class="q-chevron">▼</div>
-  </div>
-  <div class="q-body"><div class="q-body-inner">
-    <div class="field" style="margin-bottom:0;"><label>Contractor Bill Rate (per hour) *</label>
-      <input type="text" id="wRate" placeholder="$200" oninput="formatCurrency(this);liveCalc()">
-      <div class="field-hint">The hourly rate charged by the contractor or staffing agency</div>
-    </div>
-    <button class="q-confirm" onclick="confirmQ('q4-rate','q4-length',function(){return parseCurrency($('wRate').value)>0;})">Confirm</button>
-  </div></div>
-</div>
-
-<div class="q-section" id="q4-length">
-  <div class="q-header" onclick="toggleQ(this)">
-    <div class="q-check"></div>
-    <div class="q-title">Engagement Length</div>
-    <div class="q-chevron">▼</div>
-  </div>
-  <div class="q-body"><div class="q-body-inner">
-    <div class="field" style="margin-bottom:0;">
-      <label>How long is the engagement?</label>
-      <div class="range-value" id="monthsVal">12 months</div>
-      <input type="range" id="wMonths" min="1" max="36" value="12" oninput="$('monthsVal').textContent=this.value+(this.value==='1'?' month':' months');liveCalc()">
-      <div class="range-labels"><span>1 month</span><span>36 months</span></div>
-    </div>
-    <button class="q-confirm" onclick="confirmQ('q4-length','q4-billing',function(){return true;})">Confirm</button>
-  </div></div>
-</div>
-
-<div class="q-section" id="q4-billing">
-  <div class="q-header" onclick="toggleQ(this)">
-    <div class="q-check"></div>
-    <div class="q-title">Rate &amp; Billing Model</div>
-    <div class="q-chevron">▼</div>
-  </div>
-  <div class="q-body"><div class="q-body-inner">
-    <div class="field"><label>How many hours per week?</label>
-      <div class="range-value" id="hoursVal">20 hrs/wk</div>
-      <input type="range" id="wHours" min="10" max="60" value="20" oninput="$('hoursVal').textContent=this.value+' hrs/wk';checkHoursWarning();liveCalc()">
-      <div class="range-labels"><span>10 hrs</span><span>60 hrs</span></div>
-    </div>
-    <div id="hoursWarning" class="field-warning" style="display:none;">⚠️ Weekly hours are lower than guaranteed retainer hours. You'll be paying for hours not used.</div>
-    <div class="field"><label>How will the contractor be billed?</label>
-      <select id="wBillingMode" onchange="onBillingChange();liveCalc()">
-        <option value="hourly">Hourly (pay for hours used)</option>
-        <option value="retainer">Retainer (guaranteed commitment)</option>
-      </select>
-    </div>
-
-    <div id="retainerOptions" style="display:none;">
-      <div class="field"><label>Retainer Period</label>
-        <select id="wRetainerFreq" onchange="onRetainerFreqChange();liveCalc()">
-          <option value="weekly">Weekly Retainer</option>
-          <option value="monthly">Monthly Retainer</option>
-        </select>
+    <div class="q-section q-open" id="q4-rate">
+      <div class="q-header" onclick="toggleQ(this)">
+        <div class="q-check"></div>
+        <div class="q-title">Bill Rate</div>
+        <div class="q-chevron">▼</div>
       </div>
-      <div class="field"><label id="retainerHoursLabel">Guaranteed Hours per Week</label>
-        <div class="range-value" id="minHoursVal">20 hrs</div>
-        <input type="range" id="wMinHours" min="10" max="60" value="20" oninput="document.getElementById('minHoursVal').textContent=this.value+' hrs';checkHoursWarning();liveCalc()">
-        <div class="range-labels"><span>10 hrs</span><span>60 hrs</span></div>
-      </div>
-      <div class="field"><label>Retainer Discount Type</label>
-        <select id="wDiscountType" onchange="updateDiscountSlider();liveCalc()">
-          <option value="dollar">$ per hour off bill rate</option>
-          <option value="percent">% off bill rate</option>
-        </select>
-      </div>
-      <div class="field" style="margin-bottom:0;"><label id="discountLabel">Discount Amount</label>
-        <div class="range-value" id="discountVal">$10/hr</div>
-        <input type="range" id="wDiscountAmt" min="0" max="20" value="10" oninput="updateDiscountDisplay();liveCalc()">
-        <div class="range-labels"><span id="discountMin">$0</span><span id="discountMax">$20/hr</span></div>
-        <div class="field-hint">Discount applied to the hourly bill rate for guaranteed commitment</div>
-      </div>
+      <div class="q-body"><div class="q-body-inner">
+        <div class="field" style="margin-bottom:0;"><label>Contractor bill rate (per hour) *</label>
+          <input type="text" id="wRate" placeholder="$200" oninput="formatCurrency(this);liveCalc()">
+          <div class="field-hint">Hourly rate charged by the contractor or staffing agency</div>
+        </div>
+        <button class="q-confirm" onclick="confirmQ('q4-rate','q4-length',function(){return parseCurrency($('wRate').value)>0;})">Confirm</button>
+      </div></div>
     </div>
-    <button class="q-confirm" onclick="confirmQ('q4-billing',null,function(){return true;})">Confirm</button>
-  </div></div>
-</div>
 
-<div class="nav-row">
-  <button class="btn btn-secondary" id="btn4back" onclick="goBackFromStep4()">← Back</button>
-  <button class="btn btn-primary" id="btn4next" onclick="goNextFromStep4()" disabled>See Full Results →</button>
-</div>
-```
+    <div class="q-section" id="q4-length">
+      <div class="q-header" onclick="toggleQ(this)">
+        <div class="q-check"></div>
+        <div class="q-title">Engagement Length</div>
+        <div class="q-chevron">▼</div>
+      </div>
+      <div class="q-body"><div class="q-body-inner">
+        <div class="field" style="margin-bottom:0;">
+          <label>Engagement duration</label>
+          <div class="range-value" id="monthsVal">12 months</div>
+          <input type="range" id="wMonths" min="1" max="36" value="12" oninput="$('monthsVal').textContent=this.value+(this.value==='1'?' month':' months');debouncedCalc()">
+          <div class="range-labels"><span>1 month</span><span>36 months</span></div>
+        </div>
+        <button class="q-confirm" onclick="confirmQ('q4-length','q4-billing',function(){return true;})">Confirm</button>
+      </div></div>
+    </div>
 
+    <div class="q-section" id="q4-billing">
+      <div class="q-header" onclick="toggleQ(this)">
+        <div class="q-check"></div>
+        <div class="q-title">Rate &amp; Billing Model</div>
+        <div class="q-chevron">▼</div>
+      </div>
+      <div class="q-body"><div class="q-body-inner">
+        <div class="field"><label>How many hours per week?</label>
+          <div class="range-value" id="hoursVal">20 hrs/wk</div>
+          <input type="range" id="wHours" min="10" max="60" value="20" oninput="$('hoursVal').textContent=this.value+' hrs/wk';checkHoursWarning();debouncedCalc()">
+          <div class="range-labels"><span>10 hrs</span><span>60 hrs</span></div>
+        </div>
+        <div id="hoursWarning" class="field-warning" style="display:none;">⚠️ Weekly hours are lower than guaranteed retainer hours. You'll be paying for hours not used.</div>
+        <div class="field"><label>How will the contractor be billed?</label>
+          <select id="wBillingMode" onchange="onBillingChange();liveCalc()">
+            <option value="hourly">Hourly (pay for hours used)</option>
+            <option value="retainer">Retainer (guaranteed commitment)</option>
+          </select>
+        </div>
+
+        <div id="retainerOptions" style="display:none;">
+          <div class="field"><label>Retainer Period</label>
+            <select id="wRetainerFreq" onchange="onRetainerFreqChange();liveCalc()">
+              <option value="weekly">Weekly Retainer</option>
+              <option value="monthly">Monthly Retainer</option>
+            </select>
+          </div>
+          <div class="field"><label id="retainerHoursLabel">Guaranteed Hours per Week</label>
+            <div class="range-value" id="minHoursVal">20 hrs</div>
+            <input type="range" id="wMinHours" min="10" max="60" value="20" oninput="document.getElementById('minHoursVal').textContent=this.value+' hrs';checkHoursWarning();debouncedCalc()">
+            <div class="range-labels"><span>10 hrs</span><span>60 hrs</span></div>
+          </div>
+          <div class="field"><label>Retainer Discount Type</label>
+            <select id="wDiscountType" onchange="updateDiscountSlider();liveCalc()">
+              <option value="dollar">$ per hour off bill rate</option>
+              <option value="percent">% off bill rate</option>
+            </select>
+          </div>
+          <div class="field" style="margin-bottom:0;"><label id="discountLabel">Discount Amount</label>
+            <div class="range-value" id="discountVal">$10/hr</div>
+            <input type="range" id="wDiscountAmt" min="0" max="20" value="10" oninput="updateDiscountDisplay();debouncedCalc()">
+            <div class="range-labels"><span id="discountMin">$0</span><span id="discountMax">$20/hr</span></div>
+            <div class="field-hint">Discount applied to the hourly rate for guaranteed commitment</div>
+          </div>
+        </div>
+        <button class="q-confirm" onclick="confirmQ('q4-billing',null,function(){return true;})">Confirm</button>
+      </div></div>
+    </div>
+
+    <div class="nav-row">
+      <button class="btn btn-secondary" id="btn4back" onclick="goBackFromStep4()">← Back</button>
+      <button class="btn btn-primary" id="btn4next" onclick="goNextFromStep4()" disabled>See Full Results →</button>
+    </div>
   </div>
 
   <!-- STEP 5: Results -->
-
   <div class="step" id="step5">
     <div class="step-label">Step 5 of 5</div>
     <div class="step-title" style="font-size:1.35em;margin-bottom:4px;">Your Cost Comparison</div>
     <div class="step-desc" style="margin-bottom:14px;">Complete breakdown for <strong id="resultRoleLabel"></strong>.</div>
     <div id="verdictBarContainer"></div>
+    <div id="recommendationContainer"></div>
     <div class="result-cards" id="resultCards"></div>
 
-```
-<div class="report-cta">
-  <h3>Get the Full Report</h3>
-  <p>Generate a branded PDF report with PESTLE industry analysis, risk assessment, strategic recommendations, and actionable next steps tailored to your scenario.</p>
-  <button class="btn btn-red" onclick="generateReport()" style="width:100%;">Generate PDF Report →</button>
-</div>
-<div class="nav-row">
-  <button class="btn btn-secondary" onclick="goBackFromStep5()">← Adjust Numbers</button>
-</div>
-```
-
+    <div class="report-cta">
+      <h3>Get the Full Report</h3>
+      <p>Generate a branded PDF report with PESTLE industry analysis, risk assessment, strategic recommendations, and actionable next steps tailored to your scenario.</p>
+      <button class="btn btn-red" onclick="generateReport()" style="width:100%;">Generate PDF Report →</button>
+    </div>
+    <div class="nav-row">
+      <button class="btn btn-secondary" onclick="goBackFromStep5()">← Adjust Numbers</button>
+    </div>
   </div>
 </div>
 
 <!-- Email modal -->
-
 <div class="email-modal-overlay" id="emailModal">
   <div class="email-modal">
     <button class="email-modal-close" onclick="closeEmailModal()">×</button>
@@ -551,7 +609,7 @@ html,body{overflow-x:hidden;width:100%;}
   </div>
 </div>
 
-<footer class="ftr">Main Line Talent Group &nbsp;·&nbsp; Cost analysis aid only. Not a replacement for HR, finance, and business stakeholder dialogue. &nbsp;·&nbsp; 2025 national benchmarks. Not financial or legal advice.</footer>
+<footer class="ftr">Main Line Talent Group &nbsp;·&nbsp; For planning purposes only. Not a substitute for professional HR, financial, or legal counsel. &nbsp;·&nbsp; Based on 2025 national benchmarks.</footer>
 
 <script>
 const $ = id => document.getElementById(id);
@@ -599,23 +657,37 @@ function goStep(n) {
 }
 
 function goNextFromStep2() {
+  // Validate all required fields before advancing
+  if(!wizardData.industry||!wizardData.role||(!wizardData.stateVal&&!($('wRemote')&&$('wRemote').checked))||!wizardData.startDate){
+    checkStep2(); return;
+  }
   var order = stepOrder();
-  goStep(order[2]); // 3rd position in flow (index 2)
+  goStep(order[2]);
 }
 function goNextFromStep3() {
+  // Validate salary is reasonable
+  var sal=parseCurrency($('wSalary')?$('wSalary').value:'0');
+  if(sal<=0){$('wSalary').style.borderColor='var(--red)';$('wSalary').focus();return;}
+  if(sal>10000000){$('wSalary').style.borderColor='var(--red)';$('wSalary').focus();return;}
+  $('wSalary').style.borderColor='';
   var order = stepOrder();
   var pos = order.indexOf(3);
+  goStep(order[pos + 1]);
+}
+function goNextFromStep4() {
+  // Validate rate is reasonable
+  var rt=parseCurrency($('wRate')?$('wRate').value:'0');
+  if(rt<=0){$('wRate').style.borderColor='var(--red)';$('wRate').focus();return;}
+  if(rt>5000){$('wRate').style.borderColor='var(--red)';$('wRate').focus();return;}
+  $('wRate').style.borderColor='';
+  var order = stepOrder();
+  var pos = order.indexOf(4);
   goStep(order[pos + 1]);
 }
 function goBackFromStep3() {
   var order = stepOrder();
   var pos = order.indexOf(3);
   goStep(order[pos - 1]);
-}
-function goNextFromStep4() {
-  var order = stepOrder();
-  var pos = order.indexOf(4);
-  goStep(order[pos + 1]);
 }
 function goBackFromStep4() {
   var order = stepOrder();
@@ -635,13 +707,13 @@ function setupStep3() {
   var isLastDataStep = (pos === 3); // position 4 in flow (index 3) = last before results
   if (wizardData.intent==='contract') {
     $('step3Title').textContent = "What would a direct hire look like instead?";
-    $('step3Desc').textContent = "To give you an accurate comparison, we need to calculate what it would cost to bring " + role + " on as a full-time W-2 employee. This lets us show you exactly how much you save or spend by going the contractor route.";
+    $('step3Desc').textContent = "To give you an accurate comparison, we need to calculate what it would cost to bring " + role + " on as a full-time W-2 employee. This enables a precise comparison of the cost difference between the two models.";
   } else if (wizardData.intent==='perm') {
     $('step3Title').textContent = "Direct hire details for " + role;
     $('step3Desc').textContent = "Enter the compensation details for this full-time W-2 position.";
   } else {
     $('step3Title').textContent = "Direct hire details for " + role;
-    $('step3Desc').textContent = "Let's start with what it would cost to hire this person as a full-time W-2 employee.";
+    $('step3Desc').textContent = "Enter the compensation details to calculate the full cost of a W-2 hire.";
   }
   // Update button label based on flow position
   $('btn3next').textContent = isLastDataStep ? 'See Full Results →' : 'Continue →';
@@ -658,7 +730,7 @@ function setupStep4() {
     $('step4Desc').textContent = "Enter the details for this contractor engagement.";
   } else if (wizardData.intent==='perm') {
     $('step4Title').textContent = "What would a contractor look like instead?";
-    $('step4Desc').textContent = "To give you an accurate comparison, we need to calculate what it would cost to engage " + role + " as a contractor. This lets us show you exactly how the two options stack up side by side.";
+    $('step4Desc').textContent = "To give you an accurate comparison, we need to calculate what it would cost to engage " + role + " as a contractor. This enables a direct financial comparison of both engagement models.";
   } else {
     $('step4Title').textContent = "Contractor details for " + role;
     $('step4Desc').textContent = "Now enter the contractor details so we can compare the two options.";
@@ -722,8 +794,8 @@ function checkStep2() {
   $('btn2next').disabled=!(wizardData.industry&&wizardData.role&&stateOk&&wizardData.startDate);
 }
 
-function parseCurrency(v){return parseInt(String(v).replace(/[^0-9]/g,''))||0;}
-function formatCurrency(el){var v=parseCurrency(el.value);if(v>0)el.value='$'+v.toLocaleString();}
+function parseCurrency(v){if(!v)return 0;var n=parseInt(String(v).replace(/[^0-9]/g,''));return isNaN(n)||n<0?0:n;}
+function formatCurrency(el){var v=parseCurrency(el.value);if(v>0){el.value='$'+v.toLocaleString();el.style.borderColor='';}else if(el.value.trim()&&el.value!=='$'){el.style.borderColor='var(--red)';}}
 function onBillingChange(){
   var mode=$('wBillingMode').value;
   var isRetainer=mode==='retainer';
@@ -777,9 +849,21 @@ function onRemoteToggle(){
 }
 
 
+
+function onBonusTypeChange(){
+  var t=$('wBonusType').value;
+  var block=$('bonusDetailBlock');
+  var hint=$('bonusHint');
+  if(t==='none'){block.style.display='none';return;}
+  block.style.display='block';
+  if(t==='onetime') hint.textContent='One-time bonus paid at hire, such as a sign-on bonus.';
+  else if(t==='quarterly') hint.textContent='Enter the per-quarter bonus amount.';
+  else hint.textContent='Enter the annual bonus amount.';
+}
+
 // ═ Calculation Engine ═
 var SS_RATE=0.062,SS_CAP=168600,MED_RATE=0.0145,FUTA=0.006;
-var K401_PCT=0.03,PTO_PCT=0.0365,HEALTH=13100,IT_ANNUAL=2200;
+var PTO_PCT=0.0365,HEALTH=13100,IT_ANNUAL=2200;
 var WORK_HRS=2080,WKS_YR=52;
 
 // Graduated ramp curve: linear ramp from startProd to 100% over rampWks
@@ -799,12 +883,13 @@ function getRampBand(salary, level) {
 function parseStateVal(val){if(!val)return{suta:0.027,base:8000,extra:0};var p=val.split('-');if(p.length>=4){return{suta:parseFloat(p[1])/100,base:parseInt(p[2]),extra:parseFloat(p[3])||0};}return{suta:parseFloat(p[0])/100,base:parseInt(p[1]),extra:parseFloat(p[2])||0};}
 function getStateLabel(val){if(val==='AVG-2.50-10000-0')return'Remote (National Average)';var sel=$('wState');for(var i=0;i<sel.options.length;i++){if(sel.options[i].value===val)return sel.options[i].textContent;}return '';}
 
-function computeCosts(salary,rate,months,hours,minHrs,mode,stateVal,useRecruiter,recruitFee,customDiscount,rampLevel){
+function computeCosts(salary,rate,months,hours,minHrs,mode,stateVal,useRecruiter,recruitFee,customDiscount,rampLevel,k401Pct,bonusType,bonusAmt,bonusUnit){
   var sd=parseStateVal(stateVal), moFrac=months/12, engWks=months*(WKS_YR/12);
   var ssAmt=Math.min(salary,SS_CAP)*SS_RATE, medAmt=salary*MED_RATE;
   var futaAmt=Math.min(salary,7000)*FUTA, sutaAmt=Math.min(salary,sd.base)*sd.suta;
   var extraAmt=salary*sd.extra, annualTax=ssAmt+medAmt+futaAmt+sutaAmt+extraAmt;
-  var taxTotal=annualTax*moFrac, k401=salary*K401_PCT*moFrac, ptoAmt=salary*PTO_PCT*moFrac;
+  var kPct=(typeof k401Pct==='number')?k401Pct/100:0.03;
+  var taxTotal=annualTax*moFrac, k401=salary*kPct*moFrac, ptoAmt=salary*PTO_PCT*moFrac;
   var healthAmt=HEALTH*moFrac, itAmt=IT_ANNUAL*moFrac;
   var recruitAmt=useRecruiter?salary*(recruitFee/100):0;
   var ramp=getRampBand(salary, rampLevel);
@@ -812,7 +897,14 @@ function computeCosts(salary,rate,months,hours,minHrs,mode,stateVal,useRecruiter
   // Lost productivity = (1 - startProd) / 2 (triangle average)
   var rampCost=(salary/WORK_HRS)*(ramp.wks*40)*((1-ramp.start)/2);
   var salaryPro=salary*moFrac;
-  var dTotal=salaryPro+taxTotal+healthAmt+k401+ptoAmt+itAmt+recruitAmt+rampCost;
+  var bonusCost=0;
+  if(bonusType&&bonusType!=='none'){
+    var bAmt=(bonusUnit==='percent')?(salary*(bonusAmt/100)):bonusAmt;
+    if(bonusType==='onetime') bonusCost=bAmt;
+    else if(bonusType==='quarterly') bonusCost=bAmt*(months/3);
+    else if(bonusType==='annual') bonusCost=bAmt*moFrac;
+  }
+  var dTotal=salaryPro+taxTotal+healthAmt+k401+ptoAmt+itAmt+recruitAmt+rampCost+bonusCost;
   var dEhr=(hours*engWks>0)?dTotal/(hours*engWks):0;
 
   var discountPerHr=customDiscount||0;
@@ -824,26 +916,33 @@ function computeCosts(salary,rate,months,hours,minHrs,mode,stateVal,useRecruiter
   else{var ret=effectiveRate*minHrs;var hpm=hours*(WKS_YR/12);var ov=hpm>minHrs?effectiveRate*(hpm-minHrs):0;cTotal=(ret+ov)*months;}
   var cEhr=hours*engWks>0?cTotal/(hours*engWks):effectiveRate;
 
-  var oneTime=recruitAmt+rampCost+itAmt;
-  var dMo=(salaryPro+taxTotal+healthAmt+k401+ptoAmt)/months;
+  var oneTimeBonusPart=(bonusType==='onetime')?bonusCost:0;
+  var recurringBonusMo=(bonusType&&bonusType!=='none'&&bonusType!=='onetime')?(bonusCost/months):0;
+  var oneTime=recruitAmt+rampCost+itAmt+oneTimeBonusPart;
+  var dMo=(salaryPro+taxTotal+healthAmt+k401+ptoAmt+recurringBonusMo*months)/months;
   var cMo=cTotal/months;
   var prem=cMo-dMo;
-  var xMo=prem>0?Math.max(2,Math.min(48,Math.ceil(oneTime/prem))):999;
+  var xMo=prem>0?Math.max(2,Math.ceil(oneTime/prem)):999;
 
   var cHeading=mode==='hourly'?'Contractor: Hourly':mode==='weekly'?'Contractor: Weekly Retainer':'Contractor: Monthly Retainer';
 
-  return{dTotal:dTotal,salaryPro:salaryPro,taxTotal:taxTotal,healthAmt:healthAmt,k401:k401,ptoAmt:ptoAmt,itAmt:itAmt,recruitAmt:recruitAmt,rampCost:rampCost,rampLabel:ramp.label,dEhr:dEhr,cTotal:cTotal,cEhr:cEhr,effectiveRate:effectiveRate,discountPerHr:discountPerHr,delta:dTotal-cTotal,xMo:xMo,cHeading:cHeading};
+  return{dTotal:dTotal,salaryPro:salaryPro,taxTotal:taxTotal,healthAmt:healthAmt,k401:k401,k401Pct:kPct*100,ptoAmt:ptoAmt,itAmt:itAmt,recruitAmt:recruitAmt,rampCost:rampCost,rampLabel:ramp.label,bonusCost:bonusCost,bonusType:bonusType||'none',dEhr:dEhr,cTotal:cTotal,cEhr:cEhr,effectiveRate:effectiveRate,discountPerHr:discountPerHr,delta:dTotal-cTotal,xMo:xMo,cHeading:cHeading};
 }
 
 // ═ Live Calc ═
+// Debounce helper for slider/input performance
+var _calcTimer=null;
+function debouncedCalc(){clearTimeout(_calcTimer);_calcTimer=setTimeout(liveCalc,60);}
+
 function liveCalc(){
   var salEl=$('wSalary'), rtEl=$('wRate');
   var salary=salEl?parseCurrency(salEl.value):0;
   var rate=rtEl?parseCurrency(rtEl.value):0;
-  var months=parseInt($('wMonths')?$('wMonths').value:12)||12;
-  var hours=parseInt($('wHours')?$('wHours').value:20)||20;
+  if(salary<0)salary=0; if(rate<0)rate=0;
+  var months=Math.max(1,Math.min(60,parseInt($('wMonths')?$('wMonths').value:12)||12));
+  var hours=Math.max(1,Math.min(80,parseInt($('wHours')?$('wHours').value:20)||20));
   var billingMode=$('wBillingMode')?$('wBillingMode').value:'hourly';
-  var minHrs=$('wMinHours')?parseInt($('wMinHours').value)||20:20;
+  var minHrs=$('wMinHours')?Math.max(0,parseInt($('wMinHours').value)||20):20;
   var recruitFee=$('wRecruitFee')?parseInt($('wRecruitFee').value)||30:30;
 
   var mode=billingMode;
@@ -874,9 +973,13 @@ function liveCalc(){
   if(currentStep===4) {
     $('btn4next').disabled = !rate;
     if(salary && rate) {
-      var c = computeCosts(salary, rate, months, hours, minHrs, mode, wizardData.stateVal, wizardData.useRecruiter, recruitFee, customDiscount, wizardData.rampLevel);
+      var k401Pct=parseFloat($('w401kPct')?$('w401kPct').value:3)||0;
+      var bonusType=$('wBonusType')?$('wBonusType').value:'none';
+      var bonusAmt=parseCurrency($('wBonusAmt')?$('wBonusAmt').value:'0');
+      var bonusUnit=$('wBonusUnit')?$('wBonusUnit').value:'dollar';
+      var c = computeCosts(salary, rate, months, hours, minHrs, mode, wizardData.stateVal, wizardData.useRecruiter, recruitFee, customDiscount, wizardData.rampLevel, k401Pct, bonusType, bonusAmt, bonusUnit);
       _lastCalc = c;
-      _snap={role:wizardData.role||'Not specified',industry:wizardData.industry,salary:salary,rate:rate,months:months,hrs:hours,minHrs:minHrs,mode:mode,stateLabel:getStateLabel(wizardData.stateVal),startDate:wizardData.startDate,dTotal:c.dTotal,dAnnual:c.dTotal*(12/months),salaryPro:c.salaryPro,taxTotal:c.taxTotal,healthAmt:c.healthAmt,k401:c.k401,ptoAmt:c.ptoAmt,itAmt:c.itAmt,recruitAmt:c.recruitAmt,rampCost:c.rampCost,bonusCost:0,dEhr:c.dEhr,rampLabel:c.rampLabel,cTotal:c.cTotal,cEhr:c.cEhr,cHeading:c.cHeading,delta:c.delta,xMo:c.xMo,effectiveRate:c.effectiveRate,discountPerHr:c.discountPerHr};
+      _snap={role:wizardData.role||'Not specified',industry:wizardData.industry,salary:salary,rate:rate,months:months,hrs:hours,minHrs:minHrs,mode:mode,stateLabel:getStateLabel(wizardData.stateVal),startDate:wizardData.startDate,dTotal:c.dTotal,dAnnual:c.dTotal*(12/months),salaryPro:c.salaryPro,taxTotal:c.taxTotal,healthAmt:c.healthAmt,k401:c.k401,ptoAmt:c.ptoAmt,itAmt:c.itAmt,recruitAmt:c.recruitAmt,rampCost:c.rampCost,bonusCost:c.bonusCost,bonusType:c.bonusType,k401Pct:c.k401Pct,dEhr:c.dEhr,rampLabel:c.rampLabel,cTotal:c.cTotal,cEhr:c.cEhr,cHeading:c.cHeading,delta:c.delta,xMo:c.xMo,effectiveRate:c.effectiveRate,discountPerHr:c.discountPerHr};
     }
   }
 }
@@ -887,11 +990,67 @@ function buildResults(){
   var c=_lastCalc, s=_snap;
   $('resultRoleLabel').textContent=s.role+' | '+s.industry;
 
-  // Verdict
+  // Verdict + Recommendation
   var vb=$('verdictBarContainer');
-  if(c.delta>0){vb.innerHTML='<div class="verdict-bar cw"><div class="big">Contractor saves '+fmtD(c.delta)+' over this engagement</div><div class="sm">Break-even at approximately month '+c.xMo+'</div></div>';}
-  else if(c.delta<0){vb.innerHTML='<div class="verdict-bar dw"><div class="big">Direct hire saves '+fmtD(Math.abs(c.delta))+' over this engagement</div><div class="sm">Break-even at approximately month '+c.xMo+'</div></div>';}
-  else{vb.innerHTML='<div class="verdict-bar cw"><div class="big">Costs are approximately equal</div></div>';}
+  var rec=$('recommendationContainer');
+  var contractorWins=c.delta>0;
+  var savingsAmt=fmtD(Math.abs(c.delta));
+  var pctSavings=Math.round(Math.abs(c.delta)/Math.max(c.dTotal,c.cTotal)*100);
+  var noCrossover=c.xMo>=48||c.xMo===999;
+  var winner=contractorWins?'Contractor':'Direct Hire';
+  var loser=contractorWins?'Direct Hire':'Contractor';
+
+  // Verdict bar
+  if(c.delta===0){
+    vb.innerHTML='<div class="verdict-bar cw"><div class="big">Costs are approximately equal</div><div class="sm">Either option delivers similar total cost over this engagement.</div></div>';
+  } else if(noCrossover){
+    vb.innerHTML='<div class="verdict-bar one-clear"><div class="big">'+winner+' is the clear financial choice, saving '+savingsAmt+' ('+pctSavings+'%)</div><div class="sm">No realistic break-even point within a standard planning horizon (48+ months)</div></div>';
+  } else if(contractorWins){
+    vb.innerHTML='<div class="verdict-bar cw"><div class="big">Contractor saves '+savingsAmt+' over this engagement</div><div class="sm">Break-even at approximately month '+c.xMo+'</div></div>';
+  } else {
+    vb.innerHTML='<div class="verdict-bar dw"><div class="big">Direct hire saves '+savingsAmt+' over this engagement</div><div class="sm">Break-even at approximately month '+c.xMo+'</div></div>';
+  }
+
+  // Recommendation section
+  var recHtml='<div class="recommendation-box"><div class="rec-header">📋 Our Recommendation</div><div class="rec-body">';
+
+  if(noCrossover){
+    // One clearly dominant option
+    recHtml+='<div class="rec-highlight green"><strong>From a purely financial standpoint, '+winner.toLowerCase()+' is the only cost-effective option for this scenario.</strong> The '+loser.toLowerCase()+' model costs '+savingsAmt+' more ('+pctSavings+'%), and the break-even point exceeds 48 months, well beyond any reasonable planning horizon. There is no engagement length at which '+loser.toLowerCase()+' becomes the less expensive choice.</div>';
+    recHtml+='<p>That said, cost is only one factor in a workforce decision. '+(contractorWins
+      ? 'Organizations often choose direct hire despite higher cost for reasons that don\'t appear on a spreadsheet: building institutional knowledge, strengthening team culture, reducing turnover disruption, protecting intellectual property, and investing in long-term capability. If this role is core to your operations or represents a strategic bet on your organization\'s future, the premium may be justified.'
+      : 'Organizations often engage contractors despite higher cost for strategic reasons: speed to start (contractors can typically begin in days, not weeks), access to specialized expertise that doesn\'t exist internally, the ability to scale up or down with project demand, and avoiding the long-term commitment of a permanent hire when the need may be temporary.')
+    +'</p>';
+    recHtml+='<p><strong>If you choose '+loser.toLowerCase()+' despite the cost difference, make sure that decision is intentional and tied to a clear business rationale</strong>, not simply inertia or a default assumption about how your organization staffs roles like this.</p>';
+  } else if(c.xMo > months){
+    // Winner is clear for this engagement length, but crossover exists
+    recHtml+='<p><strong>'+winner+' is the better financial option for this '+months+'-month engagement</strong>, saving '+savingsAmt+' ('+pctSavings+'%). The break-even point is approximately month '+c.xMo+', which is beyond your planned engagement length.</p>';
+    recHtml+='<p>However, if there\'s a realistic chance this need extends past month '+c.xMo+', the cost advantage shifts. '+(contractorWins
+      ? 'If you anticipate converting to a permanent hire, consider a contract-to-hire structure upfront. This preserves the near-term savings while establishing a path to direct employment if the role proves long-term.'
+      : 'If the scope of work could wrap up earlier than planned, the contractor model becomes more competitive since the one-time direct hire costs won\'t fully amortize.')
+    +'</p>';
+  } else {
+    // Close call: crossover is within the engagement
+    recHtml+='<p><strong>This is a close decision.</strong> '+winner+' saves '+savingsAmt+' over '+months+' months, but the break-even falls at month '+c.xMo+', within your engagement window. Small changes in timeline, rate, or scope could tip the balance.</p>';
+    recHtml+='<p>'+(contractorWins
+      ? 'If the engagement runs even slightly longer than planned, direct hire becomes the more economical path. Consider whether a contract-to-hire arrangement gives you the best of both worlds: lower initial risk with a clear path to permanent employment.'
+      : 'If the project scope shrinks or wraps up early, the contractor model becomes competitive because the one-time hiring costs won\'t fully amortize. Weigh how confident you are in the '+months+'-month timeline.')
+    +'</p>';
+  }
+
+  // Always include non-financial factors
+  recHtml+='<p style="font-weight:600;margin-top:12px;margin-bottom:6px;">Beyond the numbers, consider these factors:</p>';
+  recHtml+='<div class="rec-factors">';
+  recHtml+='<span class="rec-factor">🏢 Culture Fit & Team Cohesion</span>';
+  recHtml+='<span class="rec-factor">🛡️ Risk Mitigation & Compliance</span>';
+  recHtml+='<span class="rec-factor">🔒 IP & Knowledge Retention</span>';
+  recHtml+='<span class="rec-factor">⚡ Speed to Productivity</span>';
+  recHtml+='<span class="rec-factor">📈 Long-Term Strategic Value</span>';
+  recHtml+='<span class="rec-factor">🔄 Flexibility & Scalability</span>';
+  recHtml+='</div>';
+
+  recHtml+='</div></div>';
+  rec.innerHTML=recHtml;
 
   // Calendar year periods
   var years = getYearPeriods(s.startDate, s.months);
@@ -965,13 +1124,14 @@ function buildResults(){
     +'<tr><td>Base Salary</td>'+rowCells(salMo,0)+'</tr>'
     +'<tr><td>Employer Payroll Taxes</td>'+rowCells(taxMo,0)+'</tr>'
     +'<tr><td>Health Insurance</td>'+rowCells(healthMo,0)+'</tr>'
-    +'<tr><td>401(k) Match (3%)</td>'+rowCells(k401Mo,0)+'</tr>'
+    +'<tr><td>401(k) Match ('+(c.k401Pct||3)+'%)</td>'+rowCells(k401Mo,0)+'</tr>'
     +'<tr><td>PTO Cost</td>'+rowCells(ptoMo,0)+'</tr>'
     +'<tr><td>IT & Equipment</td>'+rowCells(itMo,0)+'</tr>'
     +'<tr><td>Recruiting Fee</td>'+rowCells(0,c.recruitAmt)+'</tr>'
     +'<tr><td>Ramp Cost ('+(_snap.rampLabel||'')+')</td>'+rowCells(0,c.rampCost)+'</tr>'
+    +(c.bonusCost>0?'<tr><td>Bonus / Incentive</td>'+rowCells(c.bonusType==='onetime'?0:(c.bonusCost/(months||12)),c.bonusType==='onetime'?c.bonusCost:0)+'</tr>':'')
     +'<tr class="fin-subtotal"><td>Total Cost</td>'
-    +subtotalCells([{mo:salMo},{mo:taxMo},{mo:healthMo},{mo:k401Mo},{mo:ptoMo},{mo:itMo},{mo:0,oneTime:c.recruitAmt},{mo:0,oneTime:c.rampCost}])
+    +subtotalCells([{mo:salMo},{mo:taxMo},{mo:healthMo},{mo:k401Mo},{mo:ptoMo},{mo:itMo},{mo:0,oneTime:c.recruitAmt},{mo:0,oneTime:c.rampCost}].concat(c.bonusCost>0?[{mo:c.bonusType==='onetime'?0:(c.bonusCost/(months||12)),oneTime:c.bonusType==='onetime'?c.bonusCost:0}]:[]))
     +'</tr>'
     +'</tbody></table></div>'
     +'</div></div>';
@@ -1550,130 +1710,131 @@ function buildPDF(s, narrative, w) {
 
   const html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>MLTG Cost Analysis: '+roleLabel+'</title>'
     + '<style>@page{size:letter;margin:0.4in 0.6in 0.5in 0.6in;}@media print{body{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}.no-print{display:none!important;}}.pestle-block,.section-block,p{break-inside:avoid;page-break-inside:avoid;}.section-banner{break-after:avoid;page-break-after:avoid;}*{box-sizing:border-box;margin:0;padding:0;}body{font-family:"Segoe UI",Arial,Helvetica,sans-serif;color:#231F20;font-size:11px;line-height:1.5;background:#fff;}.page{max-width:7.5in;margin:0 auto;}.header{background:#231F20;padding:14px 20px;display:flex;justify-content:space-between;align-items:center;}.header-left{color:#fff;font-weight:700;font-size:10px;letter-spacing:0.06em;}.header-right{color:#C4B8AE;font-size:8.5px;}.red-bar{height:3px;background:#EB1C24;}.title-block{background:#f5f3f0;padding:16px 20px;margin-top:16px;border-radius:5px;}.title-block h1{font-size:18px;font-weight:800;margin-bottom:4px;}.title-block .sub{font-size:10px;color:#666;}.params-bar{display:flex;background:#231F20;border-radius:5px;margin-top:12px;overflow:hidden;}.params-bar .param{flex:1;text-align:center;padding:10px 8px;}.params-bar .param-val{color:#fff;font-weight:700;font-size:12px;}.params-bar .param-lbl{color:#b4bec8;font-size:8px;margin-top:3px;}.cards{display:flex;gap:10px;margin-top:14px;}.card{flex:1;border:1px solid #ddd;border-radius:5px;overflow:hidden;}.card-accent{height:3px;}.card-body{padding:14px 16px;}.card h3{font-size:8.5px;text-transform:uppercase;letter-spacing:0.08em;color:#888;margin-bottom:8px;}.card .total{font-size:22px;font-weight:800;margin-bottom:10px;}.card table{width:100%;border-collapse:collapse;}.card td{padding:3px 0;font-size:9.5px;}.card .total-row td{font-weight:700;font-size:10.5px;padding-top:8px;border-top:1px solid #ddd;}.card .green{color:#2d7a4f;}.card .gray{color:#999;}.delta-banner{text-align:center;padding:12px;border-radius:5px;margin-top:14px;color:#fff;}.delta-banner .big{font-size:13px;font-weight:700;}.delta-banner .sm{font-size:9px;opacity:0.85;margin-top:3px;}.section-heading{font-size:15px;font-weight:800;margin-top:24px;margin-bottom:12px;}.cta-box{background:#231F20;border-radius:6px;padding:18px 22px;margin-top:24px;border-left:4px solid #EB1C24;}.cta-box h3{color:#fff;font-size:14px;margin-bottom:6px;}.cta-box p{color:#b4c4d2;font-size:9.5px;line-height:1.6;}.cta-box .email{color:#4C9CC9;font-weight:700;font-size:10px;margin-top:10px;}.footer{text-align:center;font-size:8px;color:#999;margin-top:20px;padding-top:10px;border-top:1px solid #eee;}.print-bar{text-align:center;padding:20px;}.print-bar button{font-family:inherit;padding:12px 32px;font-size:14px;font-weight:700;background:#231F20;color:#fff;border:none;border-radius:6px;cursor:pointer;}.print-bar button:hover{opacity:0.9;}</style></head><body>'
+    + '<div class="no-print print-bar"><button onclick="window.print()">\uD83D\uDCBE Save as PDF</button><p style="font-size:12px;color:#888;margin-top:8px;">In the print dialog, select <strong>"Save as PDF"</strong> as your destination (instead of a printer).</p></div>'
+    + '<div class="page"><div class="header"><div class="header-left">MAIN LINE TALENT GROUP</div><div class="header-right">mainlinetalent.com</div></div><div class="red-bar"></div>'
+    + '<div class="title-block"><h1>Workforce Cost Analysis</h1><div class="sub">Role: '+roleLabel+industryLabel+'</div><div class="sub">Prepared by Main Line Talent Group  ·  '+dateStr+'</div></div>'
+    + '<div class="params-bar"><div class="param"><div class="param-val">$'+s.salary.toLocaleString()+'</div><div class="param-lbl">Salary</div></div><div class="param"><div class="param-val">$'+s.rate+'/hr</div><div class="param-lbl">Bill Rate</div></div><div class="param"><div class="param-val">'+s.months+' months</div><div class="param-lbl">Engagement</div></div><div class="param"><div class="param-val">'+stateClean+'</div><div class="param-lbl">State</div></div><div class="param"><div class="param-val">'+billingLabel+'</div><div class="param-lbl">Billing</div></div></div>'
+    + '<div class="cards"><div class="card"><div class="card-accent" style="background:#999;"></div><div class="card-body"><h3>Direct W-2 Hire</h3><div class="total">$'+Math.round(s.dTotal).toLocaleString()+'</div><table>'
+    + '<tr><td>Base Salary (Prorated)</td><td style="text-align:right;">$'+Math.round(s.salaryPro).toLocaleString()+'</td></tr>'
+    + '<tr style="color:#999;font-size:9.5px;"><td style="padding-left:14px;">Employer Payroll Taxes</td><td style="text-align:right;">$'+Math.round(s.taxTotal).toLocaleString()+'</td></tr>'
+    + '<tr style="color:#999;font-size:9.5px;"><td style="padding-left:14px;">Health Insurance</td><td style="text-align:right;">$'+Math.round(s.healthAmt).toLocaleString()+'</td></tr>'
+    + '<tr style="color:#999;font-size:9.5px;"><td style="padding-left:14px;">401(k) Match (3%)</td><td style="text-align:right;">$'+Math.round(s.k401).toLocaleString()+'</td></tr>'
+    + '<tr style="color:#999;font-size:9.5px;"><td style="padding-left:14px;">PTO Cost (~19 Days)</td><td style="text-align:right;">$'+Math.round(s.ptoAmt).toLocaleString()+'</td></tr>'
+    + '<tr style="color:#999;font-size:9.5px;"><td style="padding-left:14px;">IT &amp; Equipment</td><td style="text-align:right;">$'+Math.round(s.itAmt).toLocaleString()+'</td></tr>'
+    + '<tr style="color:#999;font-size:9.5px;"><td style="padding-left:14px;">Recruiting / Placement</td><td style="text-align:right;">$'+Math.round(s.recruitAmt).toLocaleString()+'</td></tr>'
+    + '<tr style="color:#999;font-size:9.5px;"><td style="padding-left:14px;">Ramp Cost</td><td style="text-align:right;">$'+Math.round(s.rampCost).toLocaleString()+'</td></tr>'
+    + bonusRow
+    + '<tr class="total-row"><td>TOTAL TRUE COST</td><td style="text-align:right;">$'+Math.round(s.dTotal).toLocaleString()+'</td></tr>'
+    + '<tr class="gray"><td>Effective Hourly Rate</td><td style="text-align:right;">'+fmtHr(s.dEhr)+'</td></tr>'
+    + '</table></div></div>'
+    + '<div class="card"><div class="card-accent" style="background:#2C5E79;"></div><div class="card-body"><h3>'+(s.cHeading||'Contractor via MLTG')+'</h3><div class="total">$'+Math.round(s.cTotal).toLocaleString()+'</div><table>'
+    + '<tr><td>Bill Rate × Hours Billed</td><td style="text-align:right;">$'+Math.round(s.cTotal).toLocaleString()+'</td></tr>'
+    + '<tr class="green" style="font-size:9.5px;"><td style="padding-left:14px;">Payroll Taxes</td><td style="text-align:right;">$0 (not your cost)</td></tr>'
+    + '<tr class="green" style="font-size:9.5px;"><td style="padding-left:14px;">Benefits &amp; Insurance</td><td style="text-align:right;">$0 (not your cost)</td></tr>'
+    + '<tr class="green" style="font-size:9.5px;"><td style="padding-left:14px;">IT &amp; Equipment</td><td style="text-align:right;">$0 (not your cost)</td></tr>'
+    + '<tr class="green" style="font-size:9.5px;"><td style="padding-left:14px;">Recruiting Fee</td><td style="text-align:right;">$0 (included)</td></tr>'
+    + '<tr class="green" style="font-size:9.5px;"><td style="padding-left:14px;">Ramp Time</td><td style="text-align:right;">Minimal</td></tr>'
+    + '<tr><td>&nbsp;</td><td></td></tr><tr><td>&nbsp;</td><td></td></tr>'
+    + '<tr class="total-row"><td>TOTAL ENGAGEMENT COST</td><td style="text-align:right;">$'+Math.round(s.cTotal).toLocaleString()+'</td></tr>'
+    + '<tr class="gray"><td>Effective Hourly Rate</td><td style="text-align:right;">'+fmtHr(s.cEhr)+'</td></tr>'
+    + '</table></div></div></div>'
+    + '<div class="delta-banner" style="background:'+(contractorWins?'#2C5E79':'#2d7a4f')+';"><div class="big">'+deltaMsg+'</div><div class="sm">Break-even: approximately month '+s.xMo+'  ·  Annualized Direct Hire: $'+Math.round(s.dAnnual).toLocaleString()+'</div></div>'
+    + '<div style="page-break-before:always;"></div><div class="header" style="margin-top:0;"><div class="header-left">MAIN LINE TALENT GROUP</div><div class="header-right">Workforce Planning Calculator · '+dateStr+'</div></div><div class="red-bar"></div>'
+    + '<div class="section-heading">Analysis &amp; Recommendations</div>'
+    + sectionHTML
+    + '<div class="cta-box" style="background:#231F20;border-radius:6px;padding:22px 26px;margin-top:28px;border-left:4px solid #EB1C24;">'
+    + '<h3 style="color:#fff;font-size:15px;margin-bottom:10px;font-weight:800;">Let’s Build Your Workforce Strategy Together</h3>'
+    + '<p style="color:#b4c4d2;font-size:10px;line-height:1.7;margin-bottom:6px;">This report highlights areas that deserve deeper investigation: compensation benchmarking, talent market analysis, pay equity, succession planning, and regulatory compliance. These are exactly the challenges Main Line Talent Group helps employers solve every day.</p>'
+    + '<p style="color:#b4c4d2;font-size:10px;line-height:1.7;margin-bottom:6px;">We’re not just a staffing firm. We’re a workforce planning and talent management partner. We’d love to learn more about your business, your team, and your goals, so we can bring you the market intelligence, candidate insights, and strategic guidance that turns this analysis into action.</p>'
+    + '<p style="color:#e0d6cc;font-size:10.5px;font-weight:700;margin-bottom:14px;">Whether you’re ready to hire or still exploring options, a 15-minute conversation can make the difference.</p>'
+    + '<div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">'
+    + '<a href="https://www.mainlinetalent.com/scheduling" target="_blank" style="display:inline-block;background:#EB1C24;color:#fff;padding:11px 28px;border-radius:5px;font-size:11px;font-weight:700;text-decoration:none;letter-spacing:0.03em;">Schedule a Consultation →</a>'
+    + '<a href="mailto:support@mainlinetalent.com" style="display:inline-block;background:transparent;color:#4C9CC9;padding:11px 20px;border-radius:5px;font-size:11px;font-weight:700;text-decoration:none;border:1px solid #4C9CC9;">support@mainlinetalent.com</a>'
+    + '</div>'
+    + '<div style="margin-top:12px;color:#666;font-size:8.5px;">mainlinetalent.com  ·  Workforce Planning  ·  Talent Management  ·  Compensation Benchmarking</div>'
+    + '</div>'
+    + '<div class="footer">Main Line Talent Group  ·  Workforce Planning Calculator  ·  For Discussion Purposes Only</div>'
+    + '</div></body></html>';
 
-```
-+ '<div class="no-print print-bar"><button onclick="window.print()">\uD83D\uDCBE Save as PDF</button><p style="font-size:12px;color:#888;margin-top:8px;">In the print dialog, select <strong>"Save as PDF"</strong> as your destination (instead of a printer).</p></div>'
-+ '<div class="page"><div class="header"><div class="header-left">MAIN LINE TALENT GROUP</div><div class="header-right">mainlinetalent.com</div></div><div class="red-bar"></div>'
-+ '<div class="title-block"><h1>Workforce Cost Analysis</h1><div class="sub">Role: '+roleLabel+industryLabel+'</div><div class="sub">Prepared by Main Line Talent Group  ·  '+dateStr+'</div></div>'
-+ '<div class="params-bar"><div class="param"><div class="param-val">$'+s.salary.toLocaleString()+'</div><div class="param-lbl">Salary</div></div><div class="param"><div class="param-val">$'+s.rate+'/hr</div><div class="param-lbl">Bill Rate</div></div><div class="param"><div class="param-val">'+s.months+' months</div><div class="param-lbl">Engagement</div></div><div class="param"><div class="param-val">'+stateClean+'</div><div class="param-lbl">State</div></div><div class="param"><div class="param-val">'+billingLabel+'</div><div class="param-lbl">Billing</div></div></div>'
-+ '<div class="cards"><div class="card"><div class="card-accent" style="background:#999;"></div><div class="card-body"><h3>Direct W-2 Hire</h3><div class="total">$'+Math.round(s.dTotal).toLocaleString()+'</div><table>'
-+ '<tr><td>Base Salary (Prorated)</td><td style="text-align:right;">$'+Math.round(s.salaryPro).toLocaleString()+'</td></tr>'
-+ '<tr style="color:#999;font-size:9.5px;"><td style="padding-left:14px;">Employer Payroll Taxes</td><td style="text-align:right;">$'+Math.round(s.taxTotal).toLocaleString()+'</td></tr>'
-+ '<tr style="color:#999;font-size:9.5px;"><td style="padding-left:14px;">Health Insurance</td><td style="text-align:right;">$'+Math.round(s.healthAmt).toLocaleString()+'</td></tr>'
-+ '<tr style="color:#999;font-size:9.5px;"><td style="padding-left:14px;">401(k) Match (3%)</td><td style="text-align:right;">$'+Math.round(s.k401).toLocaleString()+'</td></tr>'
-+ '<tr style="color:#999;font-size:9.5px;"><td style="padding-left:14px;">PTO Cost (~19 Days)</td><td style="text-align:right;">$'+Math.round(s.ptoAmt).toLocaleString()+'</td></tr>'
-+ '<tr style="color:#999;font-size:9.5px;"><td style="padding-left:14px;">IT &amp; Equipment</td><td style="text-align:right;">$'+Math.round(s.itAmt).toLocaleString()+'</td></tr>'
-+ '<tr style="color:#999;font-size:9.5px;"><td style="padding-left:14px;">Recruiting / Placement</td><td style="text-align:right;">$'+Math.round(s.recruitAmt).toLocaleString()+'</td></tr>'
-+ '<tr style="color:#999;font-size:9.5px;"><td style="padding-left:14px;">Ramp Cost</td><td style="text-align:right;">$'+Math.round(s.rampCost).toLocaleString()+'</td></tr>'
-+ bonusRow
-+ '<tr class="total-row"><td>TOTAL TRUE COST</td><td style="text-align:right;">$'+Math.round(s.dTotal).toLocaleString()+'</td></tr>'
-+ '<tr class="gray"><td>Effective Hourly Rate</td><td style="text-align:right;">'+fmtHr(s.dEhr)+'</td></tr>'
-+ '</table></div></div>'
-+ '<div class="card"><div class="card-accent" style="background:#2C5E79;"></div><div class="card-body"><h3>'+(s.cHeading||'Contractor via MLTG')+'</h3><div class="total">$'+Math.round(s.cTotal).toLocaleString()+'</div><table>'
-+ '<tr><td>Bill Rate × Hours Billed</td><td style="text-align:right;">$'+Math.round(s.cTotal).toLocaleString()+'</td></tr>'
-+ '<tr class="green" style="font-size:9.5px;"><td style="padding-left:14px;">Payroll Taxes</td><td style="text-align:right;">$0 (not your cost)</td></tr>'
-+ '<tr class="green" style="font-size:9.5px;"><td style="padding-left:14px;">Benefits &amp; Insurance</td><td style="text-align:right;">$0 (not your cost)</td></tr>'
-+ '<tr class="green" style="font-size:9.5px;"><td style="padding-left:14px;">IT &amp; Equipment</td><td style="text-align:right;">$0 (not your cost)</td></tr>'
-+ '<tr class="green" style="font-size:9.5px;"><td style="padding-left:14px;">Recruiting Fee</td><td style="text-align:right;">$0 (included)</td></tr>'
-+ '<tr class="green" style="font-size:9.5px;"><td style="padding-left:14px;">Ramp Time</td><td style="text-align:right;">Minimal</td></tr>'
-+ '<tr><td>&nbsp;</td><td></td></tr><tr><td>&nbsp;</td><td></td></tr>'
-+ '<tr class="total-row"><td>TOTAL ENGAGEMENT COST</td><td style="text-align:right;">$'+Math.round(s.cTotal).toLocaleString()+'</td></tr>'
-+ '<tr class="gray"><td>Effective Hourly Rate</td><td style="text-align:right;">'+fmtHr(s.cEhr)+'</td></tr>'
-+ '</table></div></div></div>'
-+ '<div class="delta-banner" style="background:'+(contractorWins?'#2C5E79':'#2d7a4f')+';"><div class="big">'+deltaMsg+'</div><div class="sm">Break-even: approximately month '+s.xMo+'  ·  Annualized Direct Hire: $'+Math.round(s.dAnnual).toLocaleString()+'</div></div>'
-+ '<div style="page-break-before:always;"></div><div class="header" style="margin-top:0;"><div class="header-left">MAIN LINE TALENT GROUP</div><div class="header-right">Workforce Planning Calculator · '+dateStr+'</div></div><div class="red-bar"></div>'
-+ '<div class="section-heading">Analysis &amp; Recommendations</div>'
-+ sectionHTML
-+ '<div class="cta-box" style="background:#231F20;border-radius:6px;padding:22px 26px;margin-top:28px;border-left:4px solid #EB1C24;">'
-+ '<h3 style="color:#fff;font-size:15px;margin-bottom:10px;font-weight:800;">Let’s Build Your Workforce Strategy Together</h3>'
-+ '<p style="color:#b4c4d2;font-size:10px;line-height:1.7;margin-bottom:6px;">This report highlights areas that deserve deeper investigation: compensation benchmarking, talent market analysis, pay equity, succession planning, and regulatory compliance. These are exactly the challenges Main Line Talent Group helps employers solve every day.</p>'
-+ '<p style="color:#b4c4d2;font-size:10px;line-height:1.7;margin-bottom:6px;">We’re not just a staffing firm. We’re a workforce planning and talent management partner. We’d love to learn more about your business, your team, and your goals, so we can bring you the market intelligence, candidate insights, and strategic guidance that turns this analysis into action.</p>'
-+ '<p style="color:#e0d6cc;font-size:10.5px;font-weight:700;margin-bottom:14px;">Whether you’re ready to hire or still exploring options, a 15-minute conversation can make the difference.</p>'
-+ '<div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">'
-+ '<a href="https://www.mainlinetalent.com/scheduling" target="_blank" style="display:inline-block;background:#EB1C24;color:#fff;padding:11px 28px;border-radius:5px;font-size:11px;font-weight:700;text-decoration:none;letter-spacing:0.03em;">Schedule a Consultation →</a>'
-+ '<a href="mailto:support@mainlinetalent.com" style="display:inline-block;background:transparent;color:#4C9CC9;padding:11px 20px;border-radius:5px;font-size:11px;font-weight:700;text-decoration:none;border:1px solid #4C9CC9;">support@mainlinetalent.com</a>'
-+ '</div>'
-+ '<div style="margin-top:12px;color:#666;font-size:8.5px;">mainlinetalent.com  ·  Workforce Planning  ·  Talent Management  ·  Compensation Benchmarking</div>'
-+ '</div>'
-+ '<div class="footer">Main Line Talent Group  ·  Workforce Planning Calculator  ·  For Discussion Purposes Only</div>'
-+ '</div></body></html>';
-```
+  if (w && w.isEmbedded) {
+    // Render into the current page (report viewer mode)
+    document.head.insertAdjacentHTML('beforeend', '<style>' + html.match(/<style>([\s\S]*?)<\/style>/)[1] + '</style>');
+    const bodyMatch = html.match(/<body>([\s\S]*?)<\/body>/);
+    if (bodyMatch) document.body.innerHTML = bodyMatch[1];
+    document.title = 'Cost Analysis: ' + (s.role || 'Workforce') + ' | MLTG';
+  } else if (w) {
+    w.document.open(); w.document.write(html); w.document.close();
+  } else {
+    const blob = new Blob([html], {type:'text/html'});
+    const url = URL.createObjectURL(blob);
+    window.open(url, '_blank');
+  }
+}
 
-if (w && w.isEmbedded) {
-// Render into the current page (report viewer mode)
-document.head.insertAdjacentHTML(‘beforeend’, ‘<style>’ + html.match(/<style>([\s\S]*?)</style>/)[1] + ‘</style>’);
-const bodyMatch = html.match(/<body>([\s\S]*?)</body>/);
-if (bodyMatch) document.body.innerHTML = bodyMatch[1];
-document.title = ‘Cost Analysis: ’ + (s.role || ‘Workforce’) + ’ | MLTG’;
-} else if (w) {
-w.document.open(); w.document.write(html); w.document.close();
-} else {
-const blob = new Blob([html], {type:‘text/html’});
-const url = URL.createObjectURL(blob);
-window.open(url, ‘_blank’);
-}
-}
+
+
 
 // ══════════════════════════════════════════════════
 // ═ REPORT URL BUILDER ═
 function buildReportURL(snap) {
-var data = {
-r: snap.role, i: snap.industry, s: snap.salary, rt: snap.rate,
-m: snap.months, hrs: snap.hrs, mh: snap.minHrs, mo: snap.mode,
-st: snap.stateLabel,
-dT: Math.round(snap.dTotal), dA: Math.round(snap.dAnnual||snap.dTotal*(12/snap.months)),
-sp: Math.round(snap.salaryPro), tx: Math.round(snap.taxTotal),
-ha: Math.round(snap.healthAmt), k4: Math.round(snap.k401),
-pt: Math.round(snap.ptoAmt), it: Math.round(snap.itAmt),
-rc: Math.round(snap.recruitAmt), rp: Math.round(snap.rampCost),
-bc: Math.round(snap.bonusCost||0), de: snap.dEhr, rl: snap.rampLabel,
-cT: Math.round(snap.cTotal), ce: snap.cEhr,
-ch: snap.cHeading||’’, dl: Math.round(snap.delta), xm: snap.xMo
-};
-var json = JSON.stringify(data);
-var encoded = btoa(unescape(encodeURIComponent(json)));
-return ‘https://www.mainlinetalent.com/resources/workforceplanningcalculator?report=’ + encodeURIComponent(encoded);
+  var data = {
+    r: snap.role, i: snap.industry, s: snap.salary, rt: snap.rate,
+    m: snap.months, hrs: snap.hrs, mh: snap.minHrs, mo: snap.mode,
+    st: snap.stateLabel,
+    dT: Math.round(snap.dTotal), dA: Math.round(snap.dAnnual||snap.dTotal*(12/snap.months)),
+    sp: Math.round(snap.salaryPro), tx: Math.round(snap.taxTotal),
+    ha: Math.round(snap.healthAmt), k4: Math.round(snap.k401),
+    pt: Math.round(snap.ptoAmt), it: Math.round(snap.itAmt),
+    rc: Math.round(snap.recruitAmt), rp: Math.round(snap.rampCost),
+    bc: Math.round(snap.bonusCost||0), de: snap.dEhr, rl: snap.rampLabel,
+    cT: Math.round(snap.cTotal), ce: snap.cEhr,
+    ch: snap.cHeading||'', dl: Math.round(snap.delta), xm: snap.xMo
+  };
+  var json = JSON.stringify(data);
+  var encoded = btoa(unescape(encodeURIComponent(json)));
+  return 'https://www.mainlinetalent.com/resources/workforceplanningcalculator?report=' + encodeURIComponent(encoded);
 }
 
 // ── REPORT VIEWER MODE ──
 // If URL contains ?report=, render the report instead of the calculator
 // ══════════════════════════════════════════════════
 (function() {
-var params = new URLSearchParams(window.location.search);
-var encoded = params.get(‘report’);
-if (!encoded) return;
+  var params = new URLSearchParams(window.location.search);
+  var encoded = params.get('report');
+  if (!encoded) return;
 
-var d;
-try {
-var json = decodeURIComponent(escape(atob(decodeURIComponent(encoded))));
-d = JSON.parse(json);
-} catch (e) {
-document.body.innerHTML = ‘<div style="text-align:center;padding:60px;font-family:sans-serif;"><h2>Report Not Found</h2><p>This link does not contain valid report data. Please generate a new report from the calculator.</p></div>’;
-return;
-}
+  var d;
+  try {
+    var json = decodeURIComponent(escape(atob(decodeURIComponent(encoded))));
+    d = JSON.parse(json);
+  } catch (e) {
+    document.body.innerHTML = '<div style="text-align:center;padding:60px;font-family:sans-serif;"><h2>Report Not Found</h2><p>This link does not contain valid report data. Please generate a new report from the calculator.</p></div>';
+    return;
+  }
 
-var snap = {
-role: d.r, industry: d.i, salary: d.s, rate: d.rt,
-months: d.m, hrs: d.hrs, minHrs: d.mh, mode: d.mo,
-stateLabel: d.st,
-dTotal: d.dT, dAnnual: d.dA, salaryPro: d.sp, taxTotal: d.tx,
-healthAmt: d.ha, k401: d.k4, ptoAmt: d.pt, itAmt: d.it,
-recruitAmt: d.rc, rampCost: d.rp, bonusCost: d.bc || 0,
-dEhr: d.de, rampLabel: d.rl,
-cTotal: d.cT, cEhr: d.ce, cHeading: d.ch,
-delta: d.dl, xMo: d.xm
-};
+  var snap = {
+    role: d.r, industry: d.i, salary: d.s, rate: d.rt,
+    months: d.m, hrs: d.hrs, minHrs: d.mh, mode: d.mo,
+    stateLabel: d.st,
+    dTotal: d.dT, dAnnual: d.dA, salaryPro: d.sp, taxTotal: d.tx,
+    healthAmt: d.ha, k401: d.k4, ptoAmt: d.pt, itAmt: d.it,
+    recruitAmt: d.rc, rampCost: d.rp, bonusCost: d.bc || 0,
+    dEhr: d.de, rampLabel: d.rl,
+    cTotal: d.cT, cEhr: d.ce, cHeading: d.ch,
+    delta: d.dl, xMo: d.xm
+  };
 
-// Hide the wizard
-var shell = document.querySelector(’.wizard-shell’);
-if (shell) shell.style.display = ‘none’;
-var ftr = document.querySelector(’.ftr’);
-if (ftr) ftr.style.display = ‘none’;
+  // Hide the wizard
+  var shell = document.querySelector('.wizard-shell');
+  if (shell) shell.style.display = 'none';
+  var ftr = document.querySelector('.ftr');
+  if (ftr) ftr.style.display = 'none';
 
-// Generate narrative and build report in the current page
-var narrative = fetchNarrative(snap);
-buildPDF(snap, narrative, { document: document, isEmbedded: true });
+  // Generate narrative and build report in the current page
+  var narrative = fetchNarrative(snap);
+  buildPDF(snap, narrative, { document: document, isEmbedded: true });
 })();
+
 
 </script>
 </body>
