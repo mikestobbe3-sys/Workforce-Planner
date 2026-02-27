@@ -673,6 +673,15 @@ function goStep(n) {
   if (n===3 && $('step3Label')) $('step3Label').textContent = 'Step ' + (pos+1) + ' of 5';
   if (n===4 && $('step4Label')) $('step4Label').textContent = 'Step ' + (pos+1) + ' of 5';
   window.scrollTo({top:0,behavior:'smooth'});
+  setTimeout(notifyParentHeight, 80);
+}
+
+/* Tell parent iframe to resize to content height */
+function notifyParentHeight(){
+  var h = document.documentElement.scrollHeight;
+  if(window.parent!==window){
+    window.parent.postMessage({type:'resize',height:h},'*');
+  }
 }
 
 function goNextFromStep2() {
@@ -1210,10 +1219,36 @@ function generateReport(){
     container.innerHTML='';
     hbspt.forms.create({
       region:'na1',portalId:'47653730',formId:'a9ea9419-e2c0-49c7-a217-c236c350750c',target:'#hsFormContainer',
+      cssRequired:'',
       onFormReady:function(form){
         var mf=form.querySelector('input[name="message"],textarea[name="message"]');if(mf)mf.value=summary;
         var wf=form.querySelector('input[name="workforce_planning"]');if(wf)wf.value=reportURL;
         var inf=form.querySelector('select[name="industry"],input[name="industry"]');if(inf)inf.value=wizardData.industry;
+      },
+      onFormSubmit:function(form){
+        // Capture form data before HubSpot processes it, as a fallback
+        try{
+          var fields=[];
+          var inputs=form.querySelectorAll('input,textarea,select');
+          inputs.forEach(function(inp){
+            if(inp.name&&inp.name!=='hs_context'&&inp.type!=='submit'&&inp.type!=='hidden'){
+              fields.push({name:inp.name,value:inp.value||''});
+            }
+          });
+          // Also include hidden fields we set
+          fields.push({name:'message',value:summary});
+          fields.push({name:'workforce_planning',value:reportURL});
+          if(wizardData.industry) fields.push({name:'industry',value:wizardData.industry});
+          // Direct API submission as backup
+          fetch('https://api.hsforms.com/submissions/v3/integration/submit/47653730/a9ea9419-e2c0-49c7-a217-c236c350750c',{
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({
+              fields:fields,
+              context:{pageUri:window.location.href,pageName:'Workforce Planning Calculator'}
+            })
+          }).then(function(r){console.log('HubSpot API backup: '+r.status);}).catch(function(e){console.log('HubSpot API backup failed:',e);});
+        }catch(ex){console.log('HubSpot backup error:',ex);}
       },
       onFormSubmitted:function(){
         console.log('✅ HubSpot form submitted');
@@ -1664,17 +1699,17 @@ function buildPDF(s, narrative, w) {
   }
 
   // ════════════════════════════════════════════════════
-  // jsPDF EXECUTIVE REPORT
+  // jsPDF EXECUTIVE REPORT — 6-Page Template
   // ════════════════════════════════════════════════════
   const {jsPDF}=window.jspdf;
   const doc=new jsPDF({unit:'pt',format:'letter'});
-  const W=612, H=792, ML=47, MR=47, TW=W-ML-MR;
+  const W=612, H=792, ML=50, MR=50, TW=W-ML-MR;
 
   // ── Colors ──
-  const DARK=[35,31,32], WHITE=[255,255,255], CREAM=[245,243,240];
-  const RED=[235,28,36], BLUE=[44,94,121], MGRAY=[138,138,138], LGRAY=[222,219,215];
-  const TXTBODY=[61,61,61], FAINT=[160,160,160], GOOD=[26,122,66], WARN=[181,54,42];
-  const TBLALT=[250,250,248];
+  const DARK=[35,31,32], WHITE=[255,255,255], CREAM=[247,245,242];
+  const RED=[235,28,36], BLUE=[44,94,121], MGRAY=[138,138,138], LGRAY=[210,210,210];
+  const TXTBODY=[51,51,51], FAINT=[160,160,160], GOOD=[26,122,66], WARN=[181,54,42];
+  const TBLHDR=[35,31,32], TBLALT=[248,248,246];
 
   let y=0, pageNum=0;
   const today = new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'});
@@ -1685,42 +1720,47 @@ function buildPDF(s, narrative, w) {
   const savingsPct = Math.round(savings / Math.max(s.dTotal, s.cTotal) * 100);
   const dHourly = s.salary / 2080;
   const roleStr = s.role !== 'Not specified' ? s.role : 'General hiring evaluation';
-  const k401Pct = s.k401Pct != null ? Math.round(s.k401Pct) : 3;
+  const k401Pct = s.k401Pct != null ? Math.round(s.k401Pct) : 0;
+  const winner = contractorWins ? 'contract' : 'direct hire';
+  const loser = contractorWins ? 'direct hire' : 'contract';
+  const sunkCost = Math.round(s.recruitAmt + s.rampCost);
+  const burdenPct = Math.round((s.taxTotal+s.healthAmt+s.k401+s.ptoAmt+s.itAmt) / s.salaryPro * 100);
+  const billingDesc = s.mode==='hourly' ? 'Hourly (no commitment)' : s.mode==='weekly' ? 'Guaranteed Hours ('+s.minHrs+' hrs/wk guaranteed)' : 'Monthly Retainer ('+s.minHrs+' hrs/mo)';
+  const totalBillableHrs = Math.round(s.months * (365.25/12/7) * s.hrs);
 
   // ── Helpers ──
   const fmt = n => '$' + Math.round(n).toLocaleString();
-  const fmtVar = n => { const v=Math.round(n); return v===0?'—':'('+v.toLocaleString()+')'; };
+  const fmtHr = n => '$' + n.toFixed(2) + '/hr';
   function setColor(c) { doc.setTextColor(...c); }
   function setFill(c) { doc.setFillColor(...c); }
 
   // ── Page infrastructure ──
   function drawFooter(pg) {
-    setFill(DARK); doc.rect(0, H-28, W, 28, 'F');
-    setFill(RED); doc.rect(0, H-30, W, 2, 'F');
-    doc.setFont('helvetica','normal'); doc.setFontSize(7.5); setColor(MGRAY);
-    doc.text('Prepared by Main Line Talent Group  |  Confidential — For Planning Purposes Only', ML, H-11);
-    doc.text('Page '+pg, W-MR, H-11, {align:'right'});
+    setFill(DARK); doc.rect(0, H-32, W, 32, 'F');
+    setFill(RED); doc.rect(0, H-34, W, 2, 'F');
+    doc.setFont('helvetica','normal'); doc.setFontSize(7.5); setColor([180,180,180]);
+    doc.text('Prepared by Main Line Talent Group  |  Confidential \u2014 For Planning Purposes Only', ML, H-13);
+    doc.text('Page '+pg, W-MR, H-13, {align:'right'});
   }
 
   function drawPageHeader(title) {
-    y = 42;
-    doc.setFont('helvetica','bold'); doc.setFontSize(17); setColor(DARK);
+    y = 46;
+    doc.setFont('helvetica','bold'); doc.setFontSize(20); setColor(DARK);
     doc.text(title, ML, y);
-    y += 8;
-    setFill(DARK); doc.rect(ML, y, TW, 4, 'F');
-    setFill(RED); doc.rect(ML, y+4, TW, 2, 'F');
-    y += 16;
+    y += 12;
+    setFill(RED); doc.rect(ML, y, TW, 3, 'F');
+    y += 24;
   }
 
   function newPage(title) {
     if (pageNum > 0) doc.addPage();
     pageNum++;
     if (title) drawPageHeader(title);
-    else y = 42;
+    else y = 46;
   }
 
   function checkY(need) {
-    if (y + need > H - 50) { newPage(); y = 42; }
+    if (y + need > H - 55) { newPage(); y = 50; }
   }
 
   function drawWrapped(text, x, maxW, fontSize, leading, color, fontStyle) {
@@ -1735,42 +1775,30 @@ function buildPDF(s, narrative, w) {
     });
   }
 
-  function drawCard(x, cardY, w, h, opts) {
-    opts = opts || {};
-    setFill(opts.bg || CREAM);
-    doc.roundedRect(x, cardY, w, h, 4, 4, 'F');
-    if (opts.accent !== false) {
-      setFill(opts.accentColor || RED);
-      doc.rect(x, cardY, 3, h, 'F');
-    }
-  }
-
-
   // ════════════════════════════════════════════════════
   // PAGE 1 — EXECUTIVE SUMMARY
   // ════════════════════════════════════════════════════
   newPage();
   pageNum = 1;
 
-  // Logo / title header
-  y = 38;
-  doc.setFont('helvetica','bold'); doc.setFontSize(10); setColor(DARK);
-  doc.text('MAIN LINE TALENT GROUP', ML, y);
-  doc.setFont('helvetica','normal'); doc.setFontSize(18); setColor(DARK);
-  doc.text('Workforce Cost Comparison', W-MR, y, {align:'right'});
-  y += 10;
-  setFill(DARK); doc.rect(ML, y, TW, 4, 'F');
-  setFill(RED); doc.rect(ML, y+4, TW, 2, 'F');
-  y += 16;
+  // Logo area - "MAIN LINE talent group" text + title
+  y = 50;
+  doc.setFont('helvetica','bold'); doc.setFontSize(11); setColor(DARK);
+  doc.text('MAIN LINE', ML, y);
+  doc.setFont('helvetica','normal'); doc.setFontSize(9); setColor(MGRAY);
+  doc.text('talent group', ML, y + 12);
+  doc.setFont('helvetica','bold'); doc.setFontSize(22); setColor(DARK);
+  doc.text('Workforce Cost Comparison', W - MR, y + 6, {align:'right'});
+  y += 24;
+  // Full-width red bar
+  setFill(RED); doc.rect(ML, y, TW, 3, 'F');
+  y += 28;
 
   // ── Executive Summary Card ──
-  const cardX = ML, cardW = TW;
-  const cardPad = 24;
-  const contentRatio = 0.87;
-  const contentW = cardW * contentRatio;
-  const contentX = cardX + (cardW - contentW) / 2;
+  const cardX = ML + 16, cardW = TW - 32;
+  const cardPad = 22;
 
-  const contextStr = roleStr + (s.industry ? '  ·  '+s.industry : '') + '  ·  ' + stateDisplay + '  ·  ' + s.months + '-Month Engagement  ·  $' + s.salary.toLocaleString() + ' salary  ·  $' + s.rate + '/hr bill rate  ·  ' + s.hrs + ' hrs/week';
+  const contextStr = roleStr + ' \u00b7 ' + (s.industry||'') + ' \u00b7 ' + stateDisplay + ' \u00b7 ' + s.months + '-Month Engagement \u00b7 $' + s.salary.toLocaleString() + ' salary \u00b7 $' + s.rate.toFixed(2) + '/hr bill rate \u00b7 ' + s.hrs + ' hrs/week';
 
   let leadText, supportText;
   if (contractorWins && s.xMo > s.months) {
@@ -1784,98 +1812,111 @@ function buildPDF(s, narrative, w) {
     supportText = 'The break-even at month ' + s.xMo + ' falls within the engagement window. Small shifts in timeline, rate, or scope could change the recommendation.';
   }
 
-  const assumptionsText = 'Assumptions:  ' + s.months + '-month engagement  ·  ' + s.hrs + ' hours/week  ·  $' + s.salary.toLocaleString() + ' annual salary  ·  $' + s.rate + '/hr bill rate  ·  ' + stateDisplay + ' payroll tax rates' + (usesNatlAvg ? ' (national average basis)' : '') + '  ·  ' + k401Pct + '% 401(k) match  ·  Employer health insurance at national average  ·  19 PTO days/year prorated  ·  Recruiting fee per engagement terms  ·  Standard ramp-to-productivity model';
+  const assumptionsText = 'Assumptions: ' + s.months + '-month engagement \u00b7 ' + s.hrs + ' hours/week \u00b7 $' + s.salary.toLocaleString() + ' annual salary \u00b7 $' + s.rate + '/hr bill rate \u00b7 ' + stateDisplay + ' payroll tax rates' + (usesNatlAvg ? ' (national average basis)' : '') + ' \u00b7 ' + k401Pct + '% 401(k) match \u00b7 Employer health insurance at national average \u00b7 19 PTO days/year prorated \u00b7 ' + (s.recruitPct ? Math.round(s.recruitPct)+'% placement fee' : 'Recruiting fee per engagement terms') + ' \u00b7 Standard ramp-to-productivity model';
 
-  // Measure text heights
+  // Measure text heights for card sizing
+  doc.setFontSize(9.5);
+  const ctxLines = doc.splitTextToSize(contextStr, cardW - cardPad*2);
+  doc.setFontSize(13);
+  const leadLines = doc.splitTextToSize(leadText, cardW - cardPad*2);
   doc.setFontSize(10);
-  const contextLines = doc.splitTextToSize(contextStr, contentW);
-  doc.setFontSize(12);
-  const leadLines = doc.splitTextToSize(leadText, contentW);
-  doc.setFontSize(11);
-  const supportLines = doc.splitTextToSize(supportText, contentW);
-  doc.setFontSize(8.5);
-  const assumptionLines = doc.splitTextToSize(assumptionsText, contentW);
+  const suppLines = doc.splitTextToSize(supportText, cardW - cardPad*2);
+  doc.setFontSize(8);
+  const assLines = doc.splitTextToSize(assumptionsText, cardW - cardPad*2);
 
+  const kpiH = 56;
   const tblRowH = 17;
-  const baseCostRows = 9 + (s.bonusCost > 0 ? 1 : 0) + 2; // items + bonus + total + loaded
-  const costTableH = baseCostRows * tblRowH;
-  const kpiH = 58;
+  const costRowCount = 9 + (s.bonusCost > 0 ? 1 : 0) + 2;
+  const costTableH = costRowCount * tblRowH;
+  const innerW = cardW - cardPad*2;
 
-  const cardH = cardPad + 19 + 14
-    + contextLines.length * 13 + 14
-    + leadLines.length * 16 + 6
-    + supportLines.length * 15 + 14
-    + kpiH + 14
-    + costTableH + 14
-    + assumptionLines.length * 11
+  const cardH = cardPad
+    + 22 + 6 // "Executive Summary" + divider
+    + ctxLines.length * 13 + 14
+    + leadLines.length * 17 + 6
+    + suppLines.length * 14 + 16
+    + kpiH + 18
+    + costTableH + 16
+    + assLines.length * 11
     + cardPad;
 
   const cardStartY = y;
-  drawCard(cardX, cardStartY, cardW, cardH, {bg:CREAM, accentColor:RED});
+  // Card background with thin border
+  setFill([255,255,255]);
+  doc.roundedRect(cardX, cardStartY, cardW, cardH, 3, 3, 'F');
+  doc.setDrawColor(220,220,220); doc.setLineWidth(0.5);
+  doc.roundedRect(cardX, cardStartY, cardW, cardH, 3, 3, 'S');
 
-  // Card label
-  y = cardStartY + cardPad;
-  doc.setFont('helvetica','bold'); doc.setFontSize(15); setColor(DARK);
-  doc.text('Executive Summary', contentX, y + 12);
-  y += 16;
-  doc.setDrawColor(...LGRAY); doc.setLineWidth(0.5);
-  doc.line(contentX, y, contentX + contentW, y);
-  y += 12;
+  const cx = cardX + cardPad;
 
-  // Context
-  doc.setFont('helvetica','normal'); doc.setFontSize(10); setColor(MGRAY);
-  contextLines.forEach(line => { doc.text(line, contentX, y); y += 13; });
+  // "Executive Summary"
+  y = cardStartY + cardPad + 14;
+  doc.setFont('helvetica','bold'); doc.setFontSize(18); setColor(DARK);
+  doc.text('Executive Summary', cx, y);
+  y += 10;
+  doc.setDrawColor(220,220,220); doc.setLineWidth(0.5);
+  doc.line(cx, y, cx + innerW, y);
+  y += 14;
+
+  // Context line
+  doc.setFont('helvetica','normal'); doc.setFontSize(9.5); setColor(MGRAY);
+  ctxLines.forEach(line => { doc.text(line, cx, y); y += 13; });
   y += 10;
 
-  // Lead insight
-  doc.setFont('helvetica','bold'); doc.setFontSize(12); setColor(DARK);
-  leadLines.forEach(line => { doc.text(line, contentX, y); y += 16; });
+  // Lead insight (bold)
+  doc.setFont('helvetica','bold'); doc.setFontSize(13); setColor(DARK);
+  leadLines.forEach(line => { doc.text(line, cx, y); y += 17; });
   y += 4;
 
   // Support text
-  doc.setFont('helvetica','normal'); doc.setFontSize(11); setColor(TXTBODY);
-  supportLines.forEach(line => { doc.text(line, contentX, y); y += 15; });
-  y += 10;
+  doc.setFont('helvetica','normal'); doc.setFontSize(10); setColor(TXTBODY);
+  suppLines.forEach(line => { doc.text(line, cx, y); y += 14; });
+  y += 12;
 
   // ── KPI Cards ──
-  const kpiW = contentW / 3;
+  const kpiW = innerW / 3;
   const kpiInner = kpiW - 8;
-  [{label:'DIRECT HIRE TOTAL', value:fmt(s.dTotal), sub:'$'+s.dEhr.toFixed(2)+'/hr loaded', accent:false},
-   {label:'CONTRACT TOTAL', value:fmt(s.cTotal), sub:'$'+s.cEhr.toFixed(2)+'/hr effective', accent:false},
-   {label:'PROJECTED SAVINGS', value:fmt(savings), sub:savingsPct+'%  ·  Break-even Mo. '+s.xMo, accent:true}
+  [{label:'DIRECT HIRE TOTAL', value:fmt(s.dTotal), sub:fmtHr(s.dEhr)+' loaded', accent:false},
+   {label:'CONTRACT TOTAL', value:fmt(s.cTotal), sub:fmtHr(s.cEhr)+' effective', accent:false},
+   {label:'PROJECTED SAVINGS', value:fmt(savings), sub:savingsPct+'%  \u00b7  Break-even Mo. '+s.xMo, accent:true}
   ].forEach((kpi, i) => {
-    const kx = contentX + i * kpiW + 4;
-    setFill(WHITE); doc.roundedRect(kx, y, kpiInner, kpiH, 4, 4, 'F');
-    doc.setFont('helvetica','normal'); doc.setFontSize(8); setColor(MGRAY);
+    const kx = cx + i * kpiW + 4;
+    // Light border box
+    doc.setDrawColor(220,220,220); doc.setLineWidth(0.5);
+    doc.roundedRect(kx, y, kpiInner, kpiH, 3, 3, 'S');
+    doc.setFont('helvetica','normal'); doc.setFontSize(7.5); setColor(MGRAY);
     doc.text(kpi.label, kx + kpiInner/2, y + 14, {align:'center'});
-    doc.setFont('helvetica','bold'); doc.setFontSize(16);
+    doc.setFont('helvetica','bold'); doc.setFontSize(18);
     setColor(kpi.accent ? GOOD : DARK);
     doc.text(kpi.value, kx + kpiInner/2, y + 34, {align:'center'});
-    doc.setFont('helvetica','normal'); doc.setFontSize(8); setColor(MGRAY);
-    doc.text(kpi.sub, kx + kpiInner/2, y + 48, {align:'center'});
+    doc.setFont('helvetica','normal'); doc.setFontSize(7.5); setColor(MGRAY);
+    doc.text(kpi.sub, kx + kpiInner/2, y + 47, {align:'center'});
   });
-  y += kpiH + 10;
+  y += kpiH + 14;
 
   // ── Cost Comparison Table ──
-  const tblCols = [contentW * 0.377, contentW * 0.207, contentW * 0.207, contentW * 0.209];
+  const tblCols = [innerW * 0.38, innerW * 0.20, innerW * 0.21, innerW * 0.21];
   let tblY = y;
 
-  // Header row
-  setFill(DARK); doc.rect(contentX, tblY, contentW, tblRowH, 'F');
-  tblY += 12;
-  doc.setFont('helvetica','bold'); doc.setFontSize(10); setColor(WHITE);
-  doc.text('Cost Component', contentX + 6, tblY);
-  doc.text('Direct Hire', contentX + tblCols[0] + tblCols[1] - 6, tblY, {align:'right'});
-  doc.text('Contract', contentX + tblCols[0] + tblCols[1] + tblCols[2] - 6, tblY, {align:'right'});
-  doc.text('Variance', contentX + contentW - 6, tblY, {align:'right'});
-  tblY += 5;
+  // Header row - dark with red accent left edge
+  setFill(DARK); doc.rect(cx, tblY, innerW, tblRowH, 'F');
+  setFill(RED); doc.rect(cx, tblY, 3, tblRowH, 'F');
+  const hdrY = tblY + 12;
+  doc.setFont('helvetica','bold'); doc.setFontSize(9); setColor(WHITE);
+  doc.text('Cost Component', cx + 10, hdrY);
+  doc.text('Direct Hire', cx + tblCols[0] + tblCols[1] - 6, hdrY, {align:'right'});
+  doc.text('Contract', cx + tblCols[0] + tblCols[1] + tblCols[2] - 6, hdrY, {align:'right'});
+  doc.text('Variance', cx + innerW - 6, hdrY, {align:'right'});
+  tblY += tblRowH;
+
+  const fmtVar = n => { const v=Math.round(n); return v===0?'\u2014':'('+v.toLocaleString()+')'; };
 
   const costRows = [
-    {label:'Base Compensation (Prorated)', dh:fmt(s.salaryPro), ct:fmt(s.cTotal), vr: s.cTotal > s.salaryPro ? '('+Math.round(s.cTotal - s.salaryPro).toLocaleString()+')' : fmt(s.salaryPro - s.cTotal)},
-    {label:'Equivalent Hourly Rate', dh:'$'+dHourly.toFixed(2)+'/hr', ct:'$'+s.rate.toFixed(2)+'/hr', vr:'', italic:true, small:true, color:FAINT},
+    {label:'Base Compensation (Prorated)', dh:fmt(s.salaryPro), ct:fmt(s.cTotal), vr:'('+Math.round(Math.abs(s.cTotal-s.salaryPro)).toLocaleString()+')', vrColor:WARN},
+    {label:'Equivalent Hourly Rate', dh:fmtHr(dHourly), ct:fmtHr(s.rate), vr:'', italic:true, small:true, color:FAINT},
     {label:'Employer Payroll Taxes', dh:fmt(s.taxTotal), ct:'Included', vr:fmtVar(s.taxTotal), vrColor:WARN},
     {label:'Health Insurance', dh:fmt(s.healthAmt), ct:'Included', vr:fmtVar(s.healthAmt), vrColor:WARN},
-    {label:'401(k) Match ('+k401Pct+'%)', dh:fmt(s.k401), ct:'Included', vr:fmtVar(s.k401), vrColor:WARN},
+    {label:'401(k) Match ('+k401Pct+'%)', dh:fmt(s.k401), ct:'Included', vr:s.k401===0?'\u2014':fmtVar(s.k401), vrColor:s.k401===0?FAINT:WARN},
     {label:'PTO Liability', dh:fmt(s.ptoAmt), ct:'N/A', vr:fmtVar(s.ptoAmt), vrColor:WARN},
     {label:'IT and Equipment', dh:fmt(s.itAmt), ct:'N/A', vr:fmtVar(s.itAmt), vrColor:WARN},
     {label:'Recruiting / Placement Fee', dh:fmt(s.recruitAmt), ct:'Included', vr:fmtVar(s.recruitAmt), vrColor:WARN},
@@ -1884,38 +1925,51 @@ function buildPDF(s, narrative, w) {
   if (s.bonusCost > 0) {
     costRows.push({label:'Bonus / Variable Comp', dh:fmt(s.bonusCost), ct:'N/A', vr:fmtVar(s.bonusCost), vrColor:WARN});
   }
-  const totalVrColor = contractorWins ? GOOD : WARN;
-  const totalVrText = contractorWins ? fmt(savings) : fmtVar(savings);
-  costRows.push({label:'Total Engagement Cost', dh:fmt(s.dTotal), ct:fmt(s.cTotal), vr:totalVrText, vrColor:totalVrColor, bold:true, topLine:true});
-  costRows.push({label:'Effective Loaded Rate', dh:'$'+s.dEhr.toFixed(2)+'/hr', ct:'$'+s.cEhr.toFixed(2)+'/hr', vr:'$'+Math.abs(s.dEhr - s.cEhr).toFixed(2), vrColor:TXTBODY});
+  costRows.push({label:'Total Engagement Cost', dh:fmt(s.dTotal), ct:fmt(s.cTotal), vr:contractorWins?fmt(savings):fmtVar(savings), vrColor:contractorWins?GOOD:WARN, bold:true, topLine:true});
+  costRows.push({label:'Effective Loaded Rate', dh:fmtHr(s.dEhr), ct:fmtHr(s.cEhr), vr:'$'+Math.abs(s.dEhr - s.cEhr).toFixed(2), vrColor:TXTBODY});
 
   costRows.forEach((row, idx) => {
-    tblY += tblRowH;
-    if (idx % 2 === 0 && !row.bold) { setFill(WHITE); doc.rect(contentX, tblY - 12, contentW, tblRowH, 'F'); }
-    else if (!row.bold) { setFill(TBLALT); doc.rect(contentX, tblY - 12, contentW, tblRowH, 'F'); }
+    if (idx % 2 === 0 && !row.bold) { setFill(WHITE); doc.rect(cx, tblY, innerW, tblRowH, 'F'); }
+    else if (!row.bold) { setFill(TBLALT); doc.rect(cx, tblY, innerW, tblRowH, 'F'); }
     if (row.topLine) {
-      setFill(CREAM); doc.rect(contentX, tblY - 12, contentW, tblRowH, 'F');
-      doc.setDrawColor(...DARK); doc.setLineWidth(1.5);
-      doc.line(contentX, tblY - 12, contentX + contentW, tblY - 12);
+      setFill([245,243,240]); doc.rect(cx, tblY, innerW, tblRowH, 'F');
+      doc.setDrawColor(...DARK); doc.setLineWidth(1);
+      doc.line(cx, tblY, cx + innerW, tblY);
     }
-    if (!row.bold) { doc.setDrawColor(...LGRAY); doc.setLineWidth(0.25); doc.line(contentX, tblY + 5, contentX + contentW, tblY + 5); }
-    const fs = row.small ? 9.5 : 10.5;
+    const ry = tblY + 12;
+    const fs = row.small ? 8.5 : 9.5;
     doc.setFont('helvetica', row.bold ? 'bold' : (row.italic ? 'italic' : 'normal'));
     doc.setFontSize(fs);
     setColor(row.color || (row.bold ? DARK : TXTBODY));
-    doc.text(row.label, contentX + 6, tblY);
-    doc.text(row.dh, contentX + tblCols[0] + tblCols[1] - 6, tblY, {align:'right'});
-    doc.text(row.ct, contentX + tblCols[0] + tblCols[1] + tblCols[2] - 6, tblY, {align:'right'});
+    doc.text(row.label, cx + 10, ry);
+    doc.text(row.dh, cx + tblCols[0] + tblCols[1] - 6, ry, {align:'right'});
+    doc.setFont('helvetica', row.bold ? 'bold' : (row.italic ? 'italic' : 'normal'));
+    doc.text(row.ct, cx + tblCols[0] + tblCols[1] + tblCols[2] - 6, ry, {align:'right'});
     setColor(row.vrColor || TXTBODY);
-    doc.text(row.vr, contentX + contentW - 6, tblY, {align:'right'});
+    doc.setFont('helvetica', row.bold ? 'bold' : 'normal');
+    doc.text(row.vr, cx + innerW - 6, ry, {align:'right'});
+    // Subtle row separator
+    if (!row.bold && !row.topLine) {
+      doc.setDrawColor(230,230,230); doc.setLineWidth(0.25);
+      doc.line(cx, tblY + tblRowH, cx + innerW, tblY + tblRowH);
+    }
+    tblY += tblRowH;
   });
-  tblY += 14;
-  y = tblY;
+  y = tblY + 12;
 
   // Assumptions
-  doc.setFont('helvetica','normal'); doc.setFontSize(8.5); setColor(MGRAY);
-  const aLines = doc.splitTextToSize(assumptionsText, contentW);
-  aLines.forEach(line => { doc.text(line, contentX + contentW/2, y, {align:'center'}); y += 11; });
+  doc.setFont('helvetica','bold'); doc.setFontSize(7.5); setColor(DARK);
+  doc.text('Assumptions: ', cx, y);
+  const assLabelW = doc.getTextWidth('Assumptions: ');
+  doc.setFont('helvetica','normal'); doc.setFontSize(7.5); setColor(MGRAY);
+  const assBody = assumptionsText.replace('Assumptions: ','');
+  const assWrapLines = doc.splitTextToSize(assBody, innerW - 20);
+  // First line after "Assumptions:" label
+  doc.text(assWrapLines[0], cx + assLabelW, y);
+  y += 10;
+  for (let ai = 1; ai < assWrapLines.length; ai++) {
+    doc.text(assWrapLines[ai], cx + 8, y); y += 10;
+  }
 
 
   // ════════════════════════════════════════════════════
@@ -1923,299 +1977,436 @@ function buildPDF(s, narrative, w) {
   // ════════════════════════════════════════════════════
   newPage('Detailed Cost Model');
 
-  doc.setFont('helvetica','bold'); doc.setFontSize(13); setColor(DARK);
-  doc.text('Section A: Direct Hire Cost Breakdown', ML, y); y += 18;
+  // Section A: Direct Hire
+  doc.setFont('helvetica','bold'); doc.setFontSize(14); setColor(DARK);
+  doc.text('Section A: Direct Hire Cost Breakdown', ML, y); y += 20;
 
-  function drawDetailSection(title) {
-    checkY(20);
-    setFill(DARK); doc.rect(ML, y - 10, TW, 16, 'F');
-    doc.setFont('helvetica','bold'); doc.setFontSize(8); setColor(WHITE);
-    doc.text(title, ML + 6, y);
-    y += 10;
-  }
-  function drawDetailRow(label, value, opts) {
-    opts = opts || {};
-    checkY(15);
-    if (opts.subtotal) {
-      doc.setDrawColor(...LGRAY); doc.setLineWidth(0.5); doc.line(ML, y - 8, ML + TW, y - 8);
-      setFill(CREAM); doc.rect(ML, y - 8, TW, 15, 'F');
-    }
-    if (opts.grand) {
-      doc.setDrawColor(...DARK); doc.setLineWidth(1.5); doc.line(ML, y - 8, ML + TW, y - 8);
-      setFill(CREAM); doc.rect(ML, y - 8, TW, 16, 'F');
-    }
-    const fs = opts.note ? 8 : (opts.grand ? 10 : 9);
-    doc.setFont('helvetica', (opts.subtotal || opts.grand) ? 'bold' : (opts.note ? 'italic' : 'normal'));
-    doc.setFontSize(fs);
-    setColor(opts.note ? FAINT : (opts.grand ? DARK : TXTBODY));
-    doc.text(label, ML + (opts.indent || 10), y);
-    if (value) {
-      doc.setFont('helvetica', (opts.subtotal || opts.grand) ? 'bold' : (opts.note ? 'italic' : 'normal'));
-      setColor(opts.note ? FAINT : (opts.grand ? DARK : TXTBODY));
-      doc.text(value, ML + TW - 6, y, {align:'right'});
-    }
-    y += opts.note ? 12 : (opts.grand ? 16 : 14);
-  }
-
-  const burdenSub = s.taxTotal + s.healthAmt + s.k401 + s.ptoAmt + s.itAmt;
-  const compSub = s.salaryPro + s.bonusCost;
-  const burdenPct = Math.round(burdenSub / s.salaryPro * 100);
-
-  drawDetailSection('COMPENSATION');
-  drawDetailRow('Base Salary (Prorated)', fmt(s.salaryPro));
-  drawDetailRow('Equivalent hourly: $'+dHourly.toFixed(2)+'/hr  ·  Annual: $'+s.salary.toLocaleString(), '', {note:true});
-  if (s.bonusCost > 0) drawDetailRow('Bonus / Variable Compensation', fmt(s.bonusCost));
-  drawDetailRow('Subtotal: Compensation', fmt(compSub), {subtotal:true});
-
-  drawDetailSection('EMPLOYMENT BURDEN');
-  drawDetailRow('Federal Payroll Taxes (FICA)', fmt(Math.round(s.salaryPro * 0.0765)));
-  drawDetailRow('State Unemployment (SUTA)', fmt(Math.round(s.taxTotal - s.salaryPro * 0.0765)));
-  drawDetailRow('Health Insurance (Employer Share)', fmt(s.healthAmt));
-  drawDetailRow('401(k) Employer Match ('+k401Pct+'%)', fmt(s.k401));
-  drawDetailRow('PTO Accrual Liability (19 days/yr prorated)', fmt(s.ptoAmt));
-  drawDetailRow('IT, Equipment, and Onboarding', fmt(s.itAmt));
-  drawDetailRow('Subtotal: Employment Burden ('+burdenPct+'% of base)', fmt(burdenSub), {subtotal:true});
-
-  drawDetailSection('ACQUISITION COSTS');
-  drawDetailRow('Recruiting / Placement Fee', fmt(s.recruitAmt));
-  drawDetailRow('Subtotal: Acquisition', fmt(s.recruitAmt), {subtotal:true});
-
-  drawDetailSection('RAMP PRODUCTIVITY IMPACT');
-  drawDetailRow('Estimated Productivity Loss During Ramp', fmt(s.rampCost));
-  drawDetailRow('Subtotal: Ramp Impact', fmt(s.rampCost), {subtotal:true});
-
-  drawDetailRow('Total Direct Hire Cost', fmt(s.dTotal), {grand:true});
-  drawDetailRow('Effective Loaded Rate: $'+s.dEhr.toFixed(2)+'/hr', '', {note:true});
-  y += 12;
-
-  // Section B
-  checkY(200);
-  doc.setFont('helvetica','bold'); doc.setFontSize(13); setColor(DARK);
-  doc.text('Section B: Contractor Cost Breakdown', ML, y); y += 18;
-
-  const totalWeeks = Math.round(s.months * 4.33);
-  const totalHrs = Math.round(s.cTotal / Math.max(s.effectiveRate || s.rate, 1));
-
-  drawDetailSection('RATE STRUCTURE');
-  drawDetailRow('Bill Rate', '$'+s.rate.toFixed(2)+'/hr');
-  if (s.discountPerHr > 0) drawDetailRow('Volume Discount', '-$'+s.discountPerHr.toFixed(2)+'/hr');
-  if (s.effectiveRate !== s.rate) drawDetailRow('Effective Rate', '$'+(s.effectiveRate||s.rate).toFixed(2)+'/hr');
-  drawDetailRow('Annualized Equivalent (2,080 hrs)', fmt((s.effectiveRate||s.rate) * 2080));
-
-  drawDetailSection('ENGAGEMENT TERMS');
-  drawDetailRow('Engagement Duration', s.months + ' months (' + totalWeeks + ' weeks)');
-  drawDetailRow('Weekly Hours', s.hrs + ' hrs/week');
-  drawDetailRow('Total Billable Hours', totalHrs.toLocaleString() + ' hours');
-
-  drawDetailSection('TOTAL PROJECTED SPEND');
-  drawDetailRow('Bill Rate × Billable Hours', fmt(s.cTotal));
-  drawDetailRow('Employer Payroll Taxes', '$0 — absorbed by staffing partner', {note:true, indent:10});
-  drawDetailRow('Benefits and Insurance', '$0 — absorbed by staffing partner', {note:true, indent:10});
-  drawDetailRow('Recruiting Fee', '$0 — included in bill rate', {note:true, indent:10});
-  drawDetailRow('IT and Equipment', '$0 — not required', {note:true, indent:10});
-
-  drawDetailRow('Total Contract Cost', fmt(s.cTotal), {grand:true});
-  drawDetailRow('Effective Rate: $'+s.cEhr.toFixed(2)+'/hr', '', {note:true});
-
-
-  // ════════════════════════════════════════════════════
-  // NARRATIVE PAGES — AI/Industry Analysis
-  // ════════════════════════════════════════════════════
-  // Parse the v2 narrative sections
-  const sectionDefs = [
-    {key:'COMPENSATION BENCHMARK', color:GOOD},
-    {key:'DIRECT HIRE: PROS AND CONS', color:MGRAY},
-    {key:'CONTRACTOR: PROS AND CONS', color:BLUE},
-    {key:'INDUSTRY CONTEXT: EXTERNAL ENVIRONMENT (PESTLE)', color:[91,74,138]},
-    {key:'POTENTIAL RISKS TO CONSIDER', color:[180,80,20]},
-    {key:'STRATEGIC ASSESSMENT FRAMEWORK', color:DARK},
-  ];
-
-  // PESTLE letter styling
-  const pestleLetters = [
-    {letter:'P', word:'Political', color:[26,58,92]},
-    {letter:'E', word:'Economic', color:[44,94,121]},
-    {letter:'S', word:'Social', color:[91,74,138]},
-    {letter:'T', word:'Technological', color:[45,122,79]},
-    {letter:'L', word:'Legal', color:[180,80,20]},
-    {letter:'E', word:'Environmental', color:[58,122,92]},
-  ];
-  const pestleMap = {
-    'Political and Regulatory':0, 'Economic Factors':1, 'Social and Workforce Trends':2,
-    'Technological Drivers':3, 'Legal Considerations':4, 'Environmental Factors':5,
-  };
-
-  newPage('Analysis and Recommendations');
-  doc.setFont('helvetica','normal'); doc.setFontSize(9); setColor(MGRAY);
-  doc.text('Industry-specific analysis personalized to your scenario inputs' + (s.industry ? ' — '+s.industry : ''), ML, y); y += 14;
-
-  let remaining = narrative;
-  sectionDefs.forEach((sec, idx) => {
-    const nextKey = idx < sectionDefs.length - 1 ? sectionDefs[idx + 1].key : null;
-    const start = remaining.indexOf(sec.key);
-    if (start === -1) return;
-    const end = nextKey ? remaining.indexOf(nextKey) : remaining.length;
-    const body = remaining.slice(start + sec.key.length, end !== -1 ? end : undefined).trim();
-
-    checkY(60);
+  function drawCostSection(label, items) {
     // Section header bar
-    setFill(sec.color); doc.roundedRect(ML, y, TW, 22, 3, 3, 'F');
-    doc.setFont('helvetica','bold'); doc.setFontSize(9); setColor(WHITE);
-    doc.text(sec.key, ML + 12, y + 14);
-    y += 28;
-
-    // Check for PESTLE section — format sub-headers with letter blocks
-    const isPestle = sec.key.indexOf('PESTLE') !== -1;
-
-    // Split into paragraphs
-    const paragraphs = body.split(/\n\n+/).filter(p => p.trim());
-    paragraphs.forEach(para => {
-      const t = para.trim();
-      if (!t) return;
-
-      // Check for sub-header pattern: "Label: content"
-      const subMatch = t.match(/^([A-Z][A-Za-z &,\/\-]+(?:\([A-Z]+\))?):\s/);
-
-      if (isPestle && subMatch) {
-        const label = subMatch[1];
-        const rest = t.slice(subMatch[0].length).trim();
-        const pestleIdx = pestleMap[label];
-
-        if (pestleIdx !== undefined) {
-          checkY(55);
-          const pl = pestleLetters[pestleIdx];
-          // Letter block
-          setFill(pl.color);
-          doc.roundedRect(ML, y - 2, 24, 24, 3, 3, 'F');
-          doc.setFont('helvetica','bold'); doc.setFontSize(14); setColor(WHITE);
-          doc.text(pl.letter, ML + 12, y + 12, {align:'center'});
-          // Word label
-          doc.setFont('helvetica','bold'); doc.setFontSize(9); setColor(pl.color);
-          doc.text(pl.word.toUpperCase(), ML + 30, y + 4);
-          y += 8;
-          // Body text indented
-          doc.setFont('helvetica','normal'); doc.setFontSize(9.5); setColor(TXTBODY);
-          const pLines = doc.splitTextToSize(rest, TW - 34);
-          pLines.forEach(line => { checkY(13); doc.text(line, ML + 30, y); y += 13; });
-          y += 8;
-          return;
-        }
-      }
-
-      // Sub-header (non-PESTLE)
-      if (subMatch) {
-        checkY(20);
-        const label = subMatch[1];
-        const rest = t.slice(subMatch[0].length).trim();
+    setFill(DARK); doc.roundedRect(ML+8, y-1, TW-16, 16, 2, 2, 'F');
+    doc.setFont('helvetica','bold'); doc.setFontSize(8); setColor(WHITE);
+    doc.text(label, ML+16, y+9); y += 22;
+    items.forEach(item => {
+      checkY(16);
+      if (item.bold) {
         doc.setFont('helvetica','bold'); doc.setFontSize(10); setColor(DARK);
-        doc.text(label+':', ML, y); y += 14;
+      } else if (item.italic) {
+        doc.setFont('helvetica','italic'); doc.setFontSize(8.5); setColor(FAINT);
+      } else {
         doc.setFont('helvetica','normal'); doc.setFontSize(9.5); setColor(TXTBODY);
-        const sLines = doc.splitTextToSize(rest, TW);
-        sLines.forEach(line => { checkY(13); doc.text(line, ML, y); y += 13; });
-        y += 6;
-        return;
       }
-
-      // Bullet items
-      if (t.startsWith('\u2022')) {
-        checkY(16);
-        const bulletText = t.slice(1).trim();
-        doc.setFont('helvetica','normal'); doc.setFontSize(9.5); setColor(TXTBODY);
-        const bLines = doc.splitTextToSize(bulletText, TW - 16);
-        doc.text('\u2022', ML + 2, y);
-        bLines.forEach((line, li) => { checkY(13); doc.text(line, ML + 14, y); y += 13; });
-        y += 3;
-        return;
+      const indent = item.indent ? ML+24 : ML+16;
+      doc.text(item.label, indent, y);
+      if (item.value !== undefined) {
+        doc.setFont('helvetica', item.bold ? 'bold' : 'normal');
+        doc.text(item.value, W-MR-8, y, {align:'right'});
       }
-
-      // Regular paragraph
-      doc.setFont('helvetica','normal'); doc.setFontSize(9.5); setColor(TXTBODY);
-      const pLines = doc.splitTextToSize(t, TW);
-      pLines.forEach(line => { checkY(13); doc.text(line, ML, y); y += 13; });
-      y += 6;
+      y += item.bold ? 16 : (item.italic ? 13 : 14);
+      if (item.divider) {
+        doc.setDrawColor(220,220,220); doc.setLineWidth(0.25);
+        doc.line(ML+16, y-5, W-MR-8, y-5);
+      }
     });
-    y += 8;
+  }
+
+  const ficaAmt = Math.round(s.taxTotal * 0.95); // approximate FICA portion
+  const sutaAmt = Math.round(s.taxTotal - ficaAmt);
+
+  drawCostSection('COMPENSATION', [
+    {label:'Base Salary (Prorated)', value:fmt(s.salaryPro), indent:true},
+    {label:'Equivalent hourly: '+fmtHr(dHourly)+' \u00b7 Annual: $'+s.salary.toLocaleString(), italic:true, indent:true},
+    ...(s.bonusCost > 0 ? [{label:'Bonus / Variable Compensation', value:fmt(s.bonusCost), indent:true}] : []),
+    {label:'Subtotal: Compensation', value:fmt(s.salaryPro + (s.bonusCost||0)), bold:true, indent:true}
+  ]);
+  drawCostSection('EMPLOYMENT BURDEN', [
+    {label:'Federal Payroll Taxes (FICA)', value:fmt(ficaAmt), indent:true},
+    {label:'State Unemployment (SUTA)', value:fmt(sutaAmt), indent:true},
+    {label:'Health Insurance (Employer Share)', value:fmt(s.healthAmt), indent:true},
+    {label:'401(k) Employer Match ('+k401Pct+'%)', value:fmt(s.k401), indent:true},
+    {label:'PTO Accrual Liability (19 days/yr prorated)', value:fmt(s.ptoAmt), indent:true},
+    {label:'IT, Equipment, and Onboarding', value:fmt(s.itAmt), indent:true},
+    {label:'Subtotal: Employment Burden ('+burdenPct+'% of base)', value:fmt(s.taxTotal+s.healthAmt+s.k401+s.ptoAmt+s.itAmt), bold:true, indent:true}
+  ]);
+  drawCostSection('ACQUISITION COSTS', [
+    {label:'Recruiting / Placement Fee', value:fmt(s.recruitAmt), indent:true},
+    {label:'Subtotal: Acquisition', value:fmt(s.recruitAmt), bold:true, indent:true}
+  ]);
+  drawCostSection('RAMP PRODUCTIVITY IMPACT', [
+    {label:'Estimated Productivity Loss During Ramp', value:fmt(s.rampCost), indent:true},
+    {label:'Subtotal: Ramp Impact', value:fmt(s.rampCost), bold:true, indent:true}
+  ]);
+  // Total
+  y += 4;
+  doc.setDrawColor(...DARK); doc.setLineWidth(1); doc.line(ML+8, y, W-MR-8, y); y += 6;
+  doc.setFont('helvetica','bold'); doc.setFontSize(12); setColor(DARK);
+  doc.text('Total Direct Hire Cost', ML+16, y+10);
+  doc.text(fmt(s.dTotal), W-MR-8, y+10, {align:'right'}); y += 16;
+  doc.setFont('helvetica','italic'); doc.setFontSize(9); setColor(FAINT);
+  doc.text('Effective Loaded Rate: '+fmtHr(s.dEhr), ML+16, y); y += 28;
+
+  // Section B: Contractor
+  checkY(220);
+  doc.setFont('helvetica','bold'); doc.setFontSize(14); setColor(DARK);
+  doc.text('Section B: Contractor Cost Breakdown', ML, y); y += 20;
+
+  const hasDiscount = s.volumeDiscount && s.volumeDiscount > 0;
+  const effectiveRate = hasDiscount ? s.rate - s.volumeDiscount : s.rate;
+
+  drawCostSection('RATE STRUCTURE', [
+    {label:'Bill Rate', value:fmtHr(s.rate), indent:true},
+    ...(hasDiscount ? [
+      {label:'Volume Discount', value:'-'+fmtHr(s.volumeDiscount), indent:true},
+      {label:'Effective Rate', value:fmtHr(effectiveRate), indent:true}
+    ] : []),
+    {label:'Annualized Equivalent (2,080 hrs)', value:'$'+Math.round(s.rate * 2080).toLocaleString(), indent:true}
+  ]);
+  drawCostSection('ENGAGEMENT TERMS', [
+    {label:'Engagement Duration', value:s.months+' months ('+Math.round(s.months*52/12)+' weeks)', indent:true},
+    {label:'Weekly Hours', value:s.hrs+' hrs/week', indent:true},
+    {label:'Total Billable Hours', value:totalBillableHrs.toLocaleString()+' hours', indent:true}
+  ]);
+  drawCostSection('TOTAL PROJECTED SPEND', [
+    {label:'Bill Rate \u00d7 Billable Hours', value:fmt(s.cTotal), indent:true},
+    {label:'Employer Payroll Taxes', value:'$0 \u2014 absorbed by staffing partner', italic:true, indent:true},
+    {label:'Benefits and Insurance', value:'$0 \u2014 absorbed by staffing partner', italic:true, indent:true},
+    {label:'Recruiting Fee', value:'$0 \u2014 included in bill rate', italic:true, indent:true},
+    {label:'IT and Equipment', value:'$0 \u2014 not required', italic:true, indent:true}
+  ]);
+  y += 4;
+  doc.setDrawColor(...DARK); doc.setLineWidth(1); doc.line(ML+8, y, W-MR-8, y); y += 6;
+  doc.setFont('helvetica','bold'); doc.setFontSize(12); setColor(DARK);
+  doc.text('Total Contract Cost', ML+16, y+10);
+  doc.text(fmt(s.cTotal), W-MR-8, y+10, {align:'right'}); y += 16;
+  doc.setFont('helvetica','italic'); doc.setFontSize(9); setColor(FAINT);
+  doc.text('Effective Rate: '+fmtHr(s.cEhr), ML+16, y);
+
+
+  // ════════════════════════════════════════════════════
+  // PAGE 3 — STRATEGIC ANALYSIS AND RECOMMENDATION
+  // ════════════════════════════════════════════════════
+  newPage('Strategic Analysis and Recommendation');
+
+  // Recommendation
+  doc.setFont('helvetica','bold'); doc.setFontSize(14); setColor(DARK);
+  doc.text('Recommendation', ML, y); y += 16;
+
+  let recText;
+  if (contractorWins && s.xMo > s.months) {
+    recText = 'The contract engagement is the financially favorable model for this '+s.months+'-month need. The break-even point at month '+s.xMo+' exceeds the planned engagement by '+(s.xMo - s.months)+' months, providing a meaningful buffer against scope extension. If the engagement is likely to extend beyond month '+s.xMo+', a contract-to-hire structure should be negotiated upfront to preserve near-term savings while establishing a conversion path.';
+  } else if (!contractorWins && s.xMo > s.months) {
+    recText = 'The direct hire model is the financially favorable option for this '+s.months+'-month need, saving '+fmt(savings)+' ('+savingsPct+'%) over the engagement period. The break-even point at month '+s.xMo+' exceeds the planned engagement, reinforcing the direct hire recommendation. If the role proves temporary, the sunk cost exposure of '+fmt(sunkCost)+' in recruiting and ramp should be weighed against the long-term value of a permanent hire.';
+  } else {
+    recText = 'This is a close financial decision. The '+winner+' model saves '+fmt(savings)+' over '+s.months+' months, but the break-even falls at month '+s.xMo+', within the engagement window. Small changes in timeline, rate, or scope could shift the recommendation. Consider a contract-to-hire arrangement to preserve near-term flexibility while establishing a conversion path.';
+  }
+  drawWrapped(recText, ML, TW, 10, 14, TXTBODY);
+  y += 14;
+
+  // Non-Financial Considerations (2x3 grid)
+  doc.setFont('helvetica','bold'); doc.setFontSize(14); setColor(DARK);
+  doc.text('Non-Financial Considerations', ML, y); y += 16;
+
+  const nfCards = [
+    {title:'Speed to Productivity', body:'Contractors begin within days. Direct hires: 45\u201390 day time-to-fill plus 2\u20134 month ramp period.'},
+    {title:'Institutional Knowledge', body:'Direct hires compound organizational knowledge over time. Contractors require deliberate transfer protocols to prevent information loss.'},
+    {title:'Workforce Flexibility', body:'Contract engagements scale with demand without severance exposure. Direct hires represent a fixed commitment.'},
+    {title:'Work Arrangements and Talent Access', body:(stateDisplay.toLowerCase().includes('remote')?'Remote/hybrid expands the talent pool for specialized roles but requires deliberate effort on team cohesion and communication cadence.':'Location-based hiring may limit the candidate pool. Consider whether remote or hybrid arrangements could expand access to qualified candidates.')},
+    {title:'Culture and Integration', body:'Direct hires integrate into reporting lines and culture. Contractors may operate at the periphery.'+(stateDisplay.toLowerCase().includes('remote')?' Remote amplifies this for both models.':'')},
+    {title:'Succession Planning', body:'Define career path (direct hire) or knowledge transfer milestones (contractor). Identify single points of failure. Plan cross-training for both models.'}
+  ];
+  const nfColW = (TW - 10) / 2;
+  const nfRowH = 72;
+  nfCards.forEach((card, i) => {
+    const col = i % 2;
+    const row = Math.floor(i / 2);
+    if (col === 0 && i > 0) y += 0; // rows handled by fixed positioning
+    const nx = ML + col * (nfColW + 10);
+    const ny = y + row * (nfRowH + 8);
+    // Card bg
+    setFill([248,248,248]); doc.roundedRect(nx, ny, nfColW, nfRowH, 3, 3, 'F');
+    // Red dot + title
+    setFill(RED); doc.circle(nx + 12, ny + 14, 4, 'F');
+    doc.setFont('helvetica','bold'); doc.setFontSize(9); setColor(DARK);
+    doc.text(card.title, nx + 22, ny + 17);
+    // Body
+    doc.setFont('helvetica','normal'); doc.setFontSize(8); setColor(TXTBODY);
+    const bodyLines = doc.splitTextToSize(card.body, nfColW - 24);
+    bodyLines.forEach((line, li) => {
+      if (li < 4) doc.text(line, nx + 12, ny + 30 + li * 11);
+    });
+  });
+  y += 3 * (nfRowH + 8) + 14;
+
+  // Risk Considerations (2-column table)
+  checkY(140);
+  doc.setFont('helvetica','bold'); doc.setFontSize(14); setColor(DARK);
+  doc.text('Risk Considerations', ML, y); y += 14;
+
+  const riskColW = TW / 2;
+  // Headers
+  setFill(DARK);
+  doc.rect(ML, y, riskColW, 18, 'F');
+  doc.rect(ML + riskColW, y, riskColW, 18, 'F');
+  doc.setFont('helvetica','bold'); doc.setFontSize(8); setColor(WHITE);
+  doc.text('DIRECT HIRE RISKS', ML + 12, y + 12);
+  doc.text('CONTRACT ENGAGEMENT RISKS', ML + riskColW + 12, y + 12);
+  y += 18;
+
+  const dhRisks = [
+    'Recruiting timeline risk (45\u201390 day average time-to-fill)',
+    'Ramp-to-productivity loss during onboarding',
+    'Sunk cost exposure of '+fmt(sunkCost)+' if role is eliminated early',
+    'Severance and unemployment insurance liability'
+  ];
+  const ctRisks = [
+    'Cost advantage erodes past month '+s.xMo,
+    'Retention risk from competing offers mid-engagement',
+    'Institutional knowledge loss at engagement end',
+    'Worker classification compliance exposure'
+  ];
+  const riskStartY = y;
+  doc.setFont('helvetica','normal'); doc.setFontSize(8.5); setColor(TXTBODY);
+  // Left column
+  let ry = riskStartY + 10;
+  dhRisks.forEach(r => {
+    const rLines = doc.splitTextToSize(r, riskColW - 28);
+    rLines.forEach((line, li) => {
+      doc.text(li === 0 ? '\u2022  '+line : '   '+line, ML + 12, ry);
+      ry += 12;
+    });
+    ry += 3;
+  });
+  // Right column
+  ry = riskStartY + 10;
+  ctRisks.forEach(r => {
+    const rLines = doc.splitTextToSize(r, riskColW - 28);
+    rLines.forEach((line, li) => {
+      doc.text(li === 0 ? '\u2022  '+line : '   '+line, ML + riskColW + 12, ry);
+      ry += 12;
+    });
+    ry += 3;
   });
 
 
   // ════════════════════════════════════════════════════
-  // METHODOLOGY & ASSUMPTIONS PAGE
+  // PAGE 4 — HR BUSINESS PARTNER ASSESSMENT
+  // ════════════════════════════════════════════════════
+  newPage('HR Business Partner Assessment');
+
+  doc.setFont('helvetica','normal'); doc.setFontSize(9.5); setColor(MGRAY);
+  doc.text(roleStr + ' \u00b7 ' + (s.industry||'General') + ' \u00b7 ' + s.months + '-Month Planning Horizon', ML, y);
+  y += 20;
+
+  doc.setFont('helvetica','bold'); doc.setFontSize(14); setColor(DARK);
+  doc.text('Internal Workforce Assessment', ML, y); y += 18;
+
+  function drawHRBPSection(title, bullets) {
+    checkY(60);
+    doc.setFont('helvetica','bold'); doc.setFontSize(11); setColor(DARK);
+    doc.text(title, ML, y); y += 14;
+    bullets.forEach(b => {
+      checkY(28);
+      doc.setFont('helvetica','normal'); doc.setFontSize(9); setColor(TXTBODY);
+      const bLines = doc.splitTextToSize(b, TW - 20);
+      bLines.forEach((line, li) => {
+        doc.text(li === 0 ? '\u2022  '+line : '   '+line, ML + 8, y);
+        y += 12;
+      });
+      y += 2;
+    });
+    y += 8;
+  }
+
+  drawHRBPSection('Pay Equity and Compensation Structure', [
+    'Evaluate how $'+s.salary.toLocaleString()+' aligns with existing internal pay bands for comparable roles',
+    'If current employees in similar positions earn significantly more or less, this hire could create internal equity issues affecting morale, retention, and potential legal exposure',
+    'Review compensation bands, recent merit increase history, and pay equity audit findings to confirm this offer is internally consistent',
+    'For contractor engagements, assess whether the bill rate creates perceived inequity among internal staff performing similar work'
+  ]);
+  drawHRBPSection('Retention and Hiring History', [
+    'What is the organization\u2019s first-year turnover rate for '+roleStr+' or similar positions?',
+    'If direct hires in this function have historically turned over within 12\u201318 months, the contractor model may better match actual workforce patterns',
+    'If contractors have consistently converted to permanent roles, a direct hire may be more efficient than paying conversion fees later',
+    'Average time-to-fill for comparable positions should be factored into the '+s.months+'-month engagement timeline'
+  ]);
+  drawHRBPSection('Skills Evaluation and Gap Assessment', [
+    'Assess whether the skills required for this '+roleStr+' role exist within the current organization at any level',
+    'If internal candidates could be upskilled within a reasonable timeframe, a contractor engagement could serve as a bridge while building internal capability',
+    'Distinguish between must-have and nice-to-have qualifications to expand the candidate pool',
+    'Evaluate whether adjacent capabilities on the current team could be leveraged through cross-training or job redesign'
+  ]);
+  drawHRBPSection('Succession and Knowledge Transfer', [
+    'Define where this role sits in the organizational talent pipeline and succession plan',
+    'For direct hires: map the career progression path and confirm it is competitive enough to support retention beyond the initial engagement period',
+    'For contractors: establish knowledge transfer protocols and documentation requirements from day one to protect against institutional knowledge loss',
+    'Identify single points of failure and determine cross-training requirements regardless of which employment model is selected'
+  ]);
+
+
+  // ════════════════════════════════════════════════════
+  // PAGE 5 — EXTERNAL ENVIRONMENT AND INDUSTRY CONTEXT
+  // ════════════════════════════════════════════════════
+  newPage('External Environment and Industry Context');
+
+  doc.setFont('helvetica','normal'); doc.setFontSize(9.5); setColor(MGRAY);
+  doc.text((s.industry||'General Industry') + ' \u00b7 ' + s.months + '-Month Horizon', ML, y);
+  y += 20;
+
+  doc.setFont('helvetica','bold'); doc.setFontSize(14); setColor(DARK);
+  doc.text('Environmental Factors', ML, y); y += 20;
+
+  // Parse PESTLE content from narrative
+  const pestleKeys = ['Political','Economic','Social','Technological','Legal','Environmental'];
+  const pestleLabels = ['POLITICAL AND REGULATORY','ECONOMIC FACTORS','SOCIAL AND WORKFORCE TRENDS','TECHNOLOGICAL DRIVERS','LEGAL CONSIDERATIONS','ENVIRONMENTAL AND ESG'];
+  const pestleLetters = [
+    {letter:'P', color:[235,28,36]},
+    {letter:'E', color:[235,28,36]},
+    {letter:'S', color:[235,28,36]},
+    {letter:'T', color:[235,28,36]},
+    {letter:'L', color:[235,28,36]},
+    {letter:'E', color:[235,28,36]}
+  ];
+
+  // Extract PESTLE content from narrative
+  const pestleSection = narrative.split('INDUSTRY CONTEXT: EXTERNAL ENVIRONMENT (PESTLE)')[1] || '';
+  const pestleParts = pestleSection.split(/\n\n+/).filter(p => p.trim());
+
+  // Map narrative PESTLE paragraphs to structured format
+  const pestleMap = {};
+  pestleParts.forEach(p => {
+    const m = p.match(/^(Political|Economic|Social|Technological|Legal|Environmental)[^:]*:\s*/i);
+    if (m) {
+      const key = m[1].charAt(0).toUpperCase() + m[1].slice(1).toLowerCase();
+      pestleMap[key] = p.replace(m[0], '').trim();
+    }
+  });
+
+  // Fallback generic PESTLE content
+  const genericPestle = {
+    Political: 'Monitor legislative and regulatory developments that could affect employment costs, contractor classification rules, or '+(s.industry||'industry')+'-specific compliance requirements. Federal and state labor policy changes may shift the cost-benefit balance between models.',
+    Economic: 'Current labor market conditions for '+roleStr+' roles directly affect both compensation levels and talent availability. Economic uncertainty may favor the flexibility of contracting, while stability tends to favor the long-term investment of a permanent hire.',
+    Social: 'Workforce expectations around remote work, flexibility, compensation transparency, and career development continue to evolve. Understanding what '+roleStr+' candidates prioritize beyond compensation is critical for attraction and retention.',
+    Technological: 'Technology adoption trends in '+(s.industry||'the industry')+' are reshaping the skills profile required. Evaluate whether emerging technologies will change the scope of this role within the '+s.months+'-month engagement period.',
+    Legal: 'Worker classification rules and applicable labor regulations affect both employment models. Ensure contractor arrangements comply with federal and state classification tests. Review IP assignment and confidentiality provisions.',
+    Environmental: 'If the organization has sustainability commitments, consider how this role contributes to or is affected by ESG goals, reporting requirements, and stakeholder expectations in '+(s.industry||'your industry')+'.'
+  };
+
+  pestleKeys.forEach((key, i) => {
+    checkY(70);
+    const content = pestleMap[key] || genericPestle[key];
+    // Letter block
+    doc.setFont('helvetica','bold'); doc.setFontSize(20); setColor(RED);
+    doc.text(pestleLetters[i].letter, ML + 16, y + 14);
+    // Label
+    doc.setFont('helvetica','bold'); doc.setFontSize(8.5); setColor(RED);
+    doc.text(pestleLabels[i], ML + 42, y + 4);
+    // Body
+    doc.setFont('helvetica','normal'); doc.setFontSize(9); setColor(TXTBODY);
+    const pLines = doc.splitTextToSize(content, TW - 50);
+    let py = y + 16;
+    pLines.forEach(line => {
+      checkY(13);
+      doc.text(line, ML + 42, py);
+      py += 12;
+    });
+    y = py + 8;
+  });
+
+  // Areas Requiring Further Analysis
+  checkY(80);
+  y += 6;
+  doc.setFont('helvetica','bold'); doc.setFontSize(14); setColor(DARK);
+  doc.text('Areas Requiring Further Analysis', ML, y); y += 16;
+
+  const furtherAnalysis = [
+    'Benchmark the $'+s.salary.toLocaleString()+' salary and $'+s.rate+'/hr bill rate against current market data for '+roleStr+' positions in '+(s.industry||'your industry'),
+    'Investigate applicable worker classification rules to confirm the contractor engagement meets relevant legal tests',
+    'Survey internal stakeholders on willingness to integrate a contractor versus a permanent team member given team dynamics and project sensitivity',
+    'Request pipeline data from staffing partners on '+roleStr+' availability and expected time-to-start for both contractor and direct-hire searches',
+    'Review IP assignment, confidentiality, and non-compete provisions that may differ between employment models for this function'
+  ];
+  furtherAnalysis.forEach(item => {
+    checkY(28);
+    doc.setFont('helvetica','normal'); doc.setFontSize(9); setColor(TXTBODY);
+    const fLines = doc.splitTextToSize(item, TW - 20);
+    fLines.forEach((line, li) => {
+      doc.text(li === 0 ? '\u2022  '+line : '   '+line, ML + 8, y);
+      y += 12;
+    });
+    y += 3;
+  });
+
+
+  // ════════════════════════════════════════════════════
+  // PAGE 6 — METHODOLOGY AND ASSUMPTIONS
   // ════════════════════════════════════════════════════
   newPage('Methodology and Assumptions');
 
-  function drawH3(text) {
-    checkY(24);
-    doc.setFont('helvetica','bold'); doc.setFontSize(11); setColor(DARK);
-    doc.text(text, ML, y); y += 16;
+  function drawMethodSection(title, bullets) {
+    checkY(50);
+    doc.setDrawColor(220,220,220); doc.setLineWidth(0.5);
+    doc.line(ML, y-4, W-MR, y-4);
+    doc.setFont('helvetica','bold'); doc.setFontSize(10.5); setColor(DARK);
+    doc.text(title, ML, y+6); y += 18;
+    bullets.forEach(b => {
+      checkY(24);
+      doc.setFont('helvetica','normal'); doc.setFontSize(9); setColor(TXTBODY);
+      const bLines = doc.splitTextToSize(b, TW - 20);
+      bLines.forEach((line, li) => {
+        doc.text(li === 0 ? '\u2022  '+line : '   '+line, ML + 8, y);
+        y += 12;
+      });
+      y += 2;
+    });
+    y += 6;
   }
-  function drawBullet(text) {
-    checkY(16);
-    doc.setFont('helvetica','normal'); doc.setFontSize(9.5); setColor(TXTBODY);
-    const lines = doc.splitTextToSize(text, TW - 16);
-    doc.text('\u2022', ML, y);
-    lines.forEach(line => { doc.text(line, ML + 12, y); y += 13; });
-    y += 2;
-  }
 
-  drawH3('Ramp Modeling Approach');
-  drawBullet('Productivity loss estimated using a tiered ramp model based on role complexity and salary band');
-  drawBullet('Ramp cost calculated against prorated salary: '+fmt(s.rampCost)+' for this engagement ('+s.rampLabel+')');
-  drawBullet('Contractor ramp assumed minimal due to pre-screened specialization and prior deployment experience');
-  drawBullet('Model does not account for organization-specific onboarding complexity or role-specific learning curves');
+  drawMethodSection('Ramp Modeling Approach', [
+    'Productivity loss estimated using a standard 3-phase ramp model: 25% productivity in month 1, 50% in month 2, 75% in month 3, full productivity by month 4',
+    'Ramp cost calculated against prorated salary: '+fmt(s.rampCost)+' for this engagement'+(s.rampLabel?' ('+s.rampLabel+')':''),
+    'Contractor ramp assumed minimal due to pre-screened specialization and prior deployment experience',
+    'Model does not account for organization-specific onboarding complexity or role-specific learning curves'
+  ]);
+  drawMethodSection('Recruiting Fee Assumptions', [
+    'Direct-hire placement fee modeled'+(s.recruitPct?' at '+Math.round(s.recruitPct)+'% of annual salary':' per engagement terms')+': '+fmt(s.recruitAmt),
+    'Includes sourcing, screening, interview coordination, background verification, and offer management',
+    'Contractor recruiting cost absorbed by staffing partner and embedded in the bill rate',
+    'Model does not include internal HR time, job board spend, or employer branding costs'
+  ]);
+  drawMethodSection('Benefits and Payroll Burden Modeling', [
+    'Federal payroll taxes: FICA at 7.65% (Social Security 6.2% + Medicare 1.45%)',
+    'State unemployment (SUTA): rate applied to taxable wage base'+(stateDisplay && !usesNatlAvg ? ' per '+stateDisplay+' schedule' : ''),
+    'Federal unemployment (FUTA): 0.6% on first $7,000 of wages',
+    'Health insurance: national average employer contribution',
+    '401(k) match: '+k401Pct+'% of gross compensation',
+    'PTO liability: 19 days/year (national average), prorated to engagement length',
+    'IT and equipment: one-time provisioning cost',
+    'All benefit costs for contractor absorbed by staffing partner'
+  ]);
+  drawMethodSection('Time Horizon Limitations', [
+    'Analysis models a fixed '+s.months+'-month engagement; actual costs will vary with timeline changes',
+    'Break-even at month '+s.xMo+' assumes linear cost accumulation with no rate escalation',
+    'Does not model contract renewal premiums, conversion fees, or severance exposure',
+    'Inflation, merit increases, and benefit cost escalation beyond the engagement period are excluded',
+    'Organizations should re-evaluate the cost model if engagement extends more than 3 months beyond plan'
+  ]);
 
-  drawH3('Recruiting Fee Assumptions');
-  drawBullet('Direct-hire placement fee modeled per engagement terms: '+fmt(s.recruitAmt));
-  drawBullet('Includes sourcing, screening, interview coordination, background verification, and offer management');
-  drawBullet('Contractor recruiting cost absorbed by staffing partner and embedded in the bill rate');
-  drawBullet('Model does not include internal HR time, job board spend, or employer branding costs');
-
-  drawH3('Benefits and Payroll Burden Modeling');
-  drawBullet('Federal payroll taxes: FICA at 7.65% (Social Security 6.2% + Medicare 1.45%)');
-  drawBullet('State unemployment (SUTA): rate applied to taxable wage base per '+stateDisplay+' schedule');
-  drawBullet('Federal unemployment (FUTA): 0.6% on first $7,000 of wages');
-  drawBullet('Health insurance: national average employer contribution');
-  drawBullet(k401Pct+'% 401(k) employer match on gross compensation');
-  drawBullet('PTO liability: 19 days/year (national average), prorated to engagement length');
-  drawBullet('IT and equipment: one-time provisioning cost, amortized');
-  drawBullet('All benefit costs for contractor absorbed by staffing partner');
-
-  drawH3('Time Horizon Limitations');
-  drawBullet('Analysis models a fixed '+s.months+'-month engagement; actual costs will vary with timeline changes');
-  drawBullet('Break-even at month '+s.xMo+' assumes linear cost accumulation with no rate escalation');
-  drawBullet('Does not model contract renewal premiums, conversion fees, or severance exposure');
-  drawBullet('Inflation, merit increases, and benefit cost escalation beyond the engagement period are excluded');
-  drawBullet('Organizations should re-evaluate the cost model if engagement extends more than 3 months beyond plan');
-
-  y += 10;
+  // Disclaimer
   checkY(100);
-  doc.setDrawColor(...LGRAY); doc.setLineWidth(0.5);
-  doc.line(ML, y, ML + TW, y); y += 12;
-  doc.setFont('helvetica','bold'); doc.setFontSize(9); setColor(DARK);
-  doc.text('Disclaimer', ML, y); y += 14;
-  doc.setFont('helvetica','normal'); doc.setFontSize(8); setColor(MGRAY);
-  const disclaimerText = 'This analysis is provided for informational and planning purposes only and does not constitute financial, legal, or tax advice. Cost projections are based on estimated market data and standard modeling assumptions that may not reflect actual employer costs. Main Line Talent Group makes no representations or warranties, express or implied, regarding the accuracy, completeness, or reliability of this analysis. Actual costs may vary based on negotiated terms, benefits elections, regulatory changes, and other organization-specific factors. Recipients should consult qualified professionals before making workforce decisions based on this report.';
-  const dLines = doc.splitTextToSize(disclaimerText, TW);
-  dLines.forEach(line => { doc.text(line, ML, y); y += 11; });
-  y += 4;
-  const copyrightText = 'This document is proprietary to Main Line Talent Group and may not be reproduced, distributed, or disclosed to third parties without prior written consent. \u00a9 '+new Date().getFullYear()+' Main Line Talent Group. All rights reserved.';
-  const cLines = doc.splitTextToSize(copyrightText, TW);
-  cLines.forEach(line => { doc.text(line, ML, y); y += 11; });
+  y += 8;
+  doc.setDrawColor(...DARK); doc.setLineWidth(0.75); doc.line(ML, y, W-MR, y); y += 12;
+  doc.setFont('helvetica','bold'); doc.setFontSize(8.5); setColor(DARK);
+  doc.text('Disclaimer', ML, y); y += 12;
+  doc.setFont('helvetica','normal'); doc.setFontSize(7.5); setColor(MGRAY);
+  const discText = 'This analysis is provided for informational and planning purposes only and does not constitute financial, legal, or tax advice. Cost projections are based on estimated market data and standard modeling assumptions that may not reflect actual employer costs. Main Line Talent Group makes no representations or warranties, express or implied, regarding the accuracy, completeness, or reliability of this analysis. Actual costs may vary based on negotiated terms, benefits elections, regulatory changes, and other organization-specific factors. Recipients should consult qualified professionals before making workforce decisions based on this report.';
+  const disc2 = 'This document is proprietary to Main Line Talent Group and may not be reproduced, distributed, or disclosed to third parties without prior written consent. \u00a9 '+new Date().getFullYear()+' Main Line Talent Group. All rights reserved.';
+  const dLines = doc.splitTextToSize(discText, TW);
+  dLines.forEach(line => { doc.text(line, ML, y); y += 10; });
+  y += 6;
+  const d2Lines = doc.splitTextToSize(disc2, TW);
+  d2Lines.forEach(line => { doc.text(line, ML, y); y += 10; });
 
-  // CTA
-  checkY(110);
-  y += 10;
-  setFill(DARK); doc.roundedRect(ML, y, TW, 90, 6, 6, 'F');
-  setFill(RED); doc.rect(ML, y, TW, 3, 'F'); doc.rect(ML, y, 4, 90, 'F');
-  doc.setFont('helvetica','bold'); doc.setFontSize(13); setColor(WHITE);
-  doc.text("Let's Build Your Workforce Strategy Together", ML + 20, y + 22);
-  doc.setFont('helvetica','normal'); doc.setFontSize(8.5); setColor([180,196,210]);
-  const ctaLines = doc.splitTextToSize('Main Line Talent Group specializes in placing top-tier contractors and permanent hires across technology, finance, and professional services. We bring market intelligence, candidate insights, and strategic guidance to every engagement.', TW - 40);
-  let ctaY = y + 36;
-  ctaLines.forEach(l => { doc.text(l, ML + 20, ctaY); ctaY += 12; });
-  doc.setFont('helvetica','bold'); doc.setFontSize(9); setColor([76,156,201]);
-  doc.text('support@mainlinetalent.com  ·  mainlinetalent.com/scheduling', ML + 20, y + 74);
 
-  // ── Footers on all pages ──
+  // ── Draw all footers ──
   const pageCount = doc.getNumberOfPages();
   for (let p = 1; p <= pageCount; p++) {
     doc.setPage(p);
@@ -2291,6 +2482,18 @@ function buildReportURL(snap) {
   buildPDF(snap, narrative, { document: document, isEmbedded: true });
 })();
 
+/* Auto-resize iframe on load and content changes */
+(function(){
+  setTimeout(notifyParentHeight, 200);
+  if(typeof ResizeObserver!=='undefined'){
+    new ResizeObserver(function(){ notifyParentHeight(); }).observe(document.body);
+  }
+  // Also fire on accordion open/close
+  var origToggle = window.toggleQ;
+  if(origToggle){
+    window.toggleQ = function(el){ origToggle(el); setTimeout(notifyParentHeight, 350); };
+  }
+})();
 
 </script>
 </body>
