@@ -24,6 +24,7 @@
 {"@context":"https://schema.org","@type":"WebApplication","name":"Workforce Planning Calculator","description":"Free workforce cost calculator comparing direct W-2 hire vs contractor costs.","url":"https://www.mainlinetalent.com/resources/workforceplanningcalculator","applicationCategory":"BusinessApplication","operatingSystem":"Any","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"creator":{"@type":"Organization","name":"Main Line Talent Group","url":"https://www.mainlinetalent.com"}}
 </script>
 <link href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
 :root {
   --dark:#231F20; --red:#EB1C24; --blue:#4C9CC9; --blue-dark:#2E5E79; --green:#2d7a4f;
@@ -1631,164 +1632,599 @@ function fetchNarrative(s) {
   return compBenchmark+'\n\n'+directProsCons+'\n\n'+contractorProsCons+'\n\n'+industryContext+'\n\n'+risks+'\n\n'+research;
 }
 
-
 function buildPDF(s, narrative, w) {
-  const roleLabel = s.role!=='Not specified' ? s.role : 'General hiring evaluation';
-  const industryLabel = s.industry ? '  ·  Industry: '+s.industry : '';
-  const dateStr = new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'});
-  const billingLabel = s.mode==='hourly'?'Hourly':s.mode==='weekly'?'Guaranteed Hours':'Monthly Retainer';
-  const stateClean = (s.stateLabel||'').replace(/ \(.*\)/,'');
-  const contractorWins = s.delta > 0;
-  const deltaMsg = contractorWins
-    ? 'Contractor saves $'+Math.round(Math.abs(s.delta)).toLocaleString()+' over this engagement'
-    : 'Direct hire is $'+Math.round(Math.abs(s.delta)).toLocaleString()+' lower cost over this engagement';
-
-  const sectionDefs = [
-    {key:'COMPENSATION BENCHMARK', color:'#2d7a4f'},
-    {key:'DIRECT HIRE: PROS AND CONS', color:'#8c8c8c'},
-    {key:'CONTRACTOR: PROS AND CONS', color:'#2C5E79'},
-    {key:'INDUSTRY CONTEXT: EXTERNAL ENVIRONMENT (PESTLE)', color:'#5b4a8a'},
-    {key:'POTENTIAL RISKS TO CONSIDER', color:'#b45014'},
-    {key:'STRATEGIC ASSESSMENT FRAMEWORK', color:'#231F20'},
-  ];
-  // Helper: auto-link emails and URLs in text
-  function linkify(text) {
-    // Link emails
-    let out = text.replace(/([a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,})/g, function(m) {
-      return '<a href="mailto:'+m+'" style="color:#2C5E79;text-decoration:underline;">'+m+'</a>';
-    });
-    return out;
+  // ── If embedded mode (shareable URL viewer), render simplified HTML inline ──
+  if (w && w.isEmbedded) {
+    const roleLabel = s.role!=='Not specified' ? s.role : 'General hiring evaluation';
+    const dateStr = new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'});
+    const stateClean = (s.stateLabel||'').replace(/ \(.*\)/,'');
+    const contractorWins = s.delta > 0;
+    const deltaMsg = contractorWins
+      ? 'Contractor saves $'+Math.round(Math.abs(s.delta)).toLocaleString()+' over this engagement'
+      : 'Direct hire is $'+Math.round(Math.abs(s.delta)).toLocaleString()+' lower cost over this engagement';
+    const sections = narrative.split(/\n(?=(?:COMPENSATION BENCHMARK|DIRECT HIRE|CONTRACTOR:|INDUSTRY CONTEXT|POTENTIAL RISKS|STRATEGIC ASSESSMENT))/);
+    let bodyHTML = sections.map(sec => {
+      const first = sec.indexOf('\n');
+      const hdr = first > -1 ? sec.slice(0,first).trim() : sec.trim();
+      const body = first > -1 ? sec.slice(first).trim() : '';
+      return '<div style="margin-top:20px;"><div style="background:#231F20;color:#fff;padding:8px 14px;border-radius:4px;font-size:11px;font-weight:700;letter-spacing:0.06em;">'+hdr+'</div><div style="font-size:11px;color:#333;line-height:1.7;margin-top:8px;white-space:pre-line;">'+body+'</div></div>';
+    }).join('');
+    const html = '<div style="max-width:800px;margin:0 auto;padding:20px;font-family:Helvetica,Arial,sans-serif;">'
+      +'<div style="background:#231F20;padding:14px 20px;display:flex;justify-content:space-between;align-items:center;"><div style="color:#fff;font-weight:700;font-size:11px;">MAIN LINE TALENT GROUP</div><div style="color:#aaa;font-size:9px;">mainlinetalent.com</div></div>'
+      +'<div style="height:3px;background:#EB1C24;"></div>'
+      +'<div style="background:#f5f3f0;padding:16px 20px;margin-top:14px;border-radius:5px;"><h1 style="font-size:18px;font-weight:800;margin:0 0 6px;">Workforce Cost Analysis</h1><div style="font-size:10px;color:#666;">Role: '+roleLabel+(s.industry?'  ·  '+s.industry:'')+'</div><div style="font-size:10px;color:#666;">Prepared '+dateStr+'</div></div>'
+      +'<div style="text-align:center;padding:14px;border-radius:5px;margin-top:14px;color:#fff;background:'+(contractorWins?'#2C5E79':'#2d7a4f')+';"><div style="font-size:14px;font-weight:700;">'+deltaMsg+'</div><div style="font-size:9px;opacity:0.85;margin-top:4px;">Break-even: ~month '+s.xMo+'  ·  Direct hire total: $'+Math.round(s.dTotal).toLocaleString()+'  ·  Contract total: $'+Math.round(s.cTotal).toLocaleString()+'</div></div>'
+      +'<div style="text-align:center;margin-top:20px;padding:14px;background:#f5f3f0;border-radius:5px;"><p style="font-size:11px;color:#666;margin:0 0 10px;">For the full executive PDF report with detailed cost breakdowns, download below.</p><button onclick="window.print()" style="background:#231F20;color:#fff;border:none;padding:12px 28px;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer;">🖨 Print / Save as PDF</button></div>'
+      +bodyHTML
+      +'<div style="background:#231F20;border-radius:6px;padding:20px 24px;margin-top:28px;border-left:4px solid #EB1C24;"><h3 style="color:#fff;font-size:14px;margin:0 0 8px;">Ready to move forward?</h3><p style="color:#b4c4d2;font-size:10px;line-height:1.7;margin:0 0 10px;">Main Line Talent Group specializes in placing top-tier contractors and permanent hires across technology, finance, and professional services.</p><a href="https://www.mainlinetalent.com/scheduling" target="_blank" style="display:inline-block;background:#EB1C24;color:#fff;padding:10px 24px;border-radius:5px;font-size:11px;font-weight:700;text-decoration:none;">Schedule a Consultation →</a></div>'
+      +'<div style="text-align:center;font-size:8px;color:#999;margin-top:20px;padding:10px 0;border-top:1px solid #eee;">Main Line Talent Group  ·  Workforce Cost Planner  ·  For Discussion Purposes Only</div></div>';
+    document.body.innerHTML = html;
+    document.title = 'Cost Analysis: ' + roleLabel + ' | MLTG';
+    return;
   }
 
-  // PESTLE letter definitions
-  const pestleLetters = [
-    { letter: 'P', word: 'Political', color: '#1a3a5c' },
-    { letter: 'E', word: 'Economic', color: '#2C5E79' },
-    { letter: 'S', word: 'Social', color: '#5b4a8a' },
-    { letter: 'T', word: 'Technological', color: '#2d7a4f' },
-    { letter: 'L', word: 'Legal', color: '#b45014' },
-    { letter: 'E', word: 'Environmental', color: '#3a7a5c' },
+  // ════════════════════════════════════════════════════
+  // jsPDF EXECUTIVE REPORT
+  // ════════════════════════════════════════════════════
+  const {jsPDF}=window.jspdf;
+  const doc=new jsPDF({unit:'pt',format:'letter'});
+  const W=612, H=792, ML=47, MR=47, TW=W-ML-MR;
+
+  // ── Colors ──
+  const DARK=[35,31,32], WHITE=[255,255,255], CREAM=[245,243,240];
+  const RED=[235,28,36], BLUE=[44,94,121], MGRAY=[138,138,138], LGRAY=[222,219,215];
+  const TXTBODY=[61,61,61], FAINT=[160,160,160], GOOD=[26,122,66], WARN=[181,54,42];
+  const TBLALT=[250,250,248];
+
+  let y=0, pageNum=0;
+  const today = new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'});
+  const stateDisplay = (s.stateLabel||'').replace(/ \(.*\)/,'');
+  const usesNatlAvg = (s.stateLabel||'').includes('National Average');
+  const contractorWins = s.delta > 0;
+  const savings = Math.abs(s.delta);
+  const savingsPct = Math.round(savings / Math.max(s.dTotal, s.cTotal) * 100);
+  const dHourly = s.salary / 2080;
+  const roleStr = s.role !== 'Not specified' ? s.role : 'General hiring evaluation';
+  const k401Pct = s.k401Pct != null ? Math.round(s.k401Pct) : 3;
+
+  // ── Helpers ──
+  const fmt = n => '$' + Math.round(n).toLocaleString();
+  const fmtVar = n => { const v=Math.round(n); return v===0?'—':'('+v.toLocaleString()+')'; };
+  function setColor(c) { doc.setTextColor(...c); }
+  function setFill(c) { doc.setFillColor(...c); }
+
+  // ── Page infrastructure ──
+  function drawFooter(pg) {
+    setFill(DARK); doc.rect(0, H-28, W, 28, 'F');
+    setFill(RED); doc.rect(0, H-30, W, 2, 'F');
+    doc.setFont('helvetica','normal'); doc.setFontSize(7.5); setColor(MGRAY);
+    doc.text('Prepared by Main Line Talent Group  |  Confidential — For Planning Purposes Only', ML, H-11);
+    doc.text('Page '+pg, W-MR, H-11, {align:'right'});
+  }
+
+  function drawPageHeader(title) {
+    y = 42;
+    doc.setFont('helvetica','bold'); doc.setFontSize(17); setColor(DARK);
+    doc.text(title, ML, y);
+    y += 8;
+    setFill(DARK); doc.rect(ML, y, TW, 4, 'F');
+    setFill(RED); doc.rect(ML, y+4, TW, 2, 'F');
+    y += 16;
+  }
+
+  function newPage(title) {
+    if (pageNum > 0) doc.addPage();
+    pageNum++;
+    if (title) drawPageHeader(title);
+    else y = 42;
+  }
+
+  function checkY(need) {
+    if (y + need > H - 50) { newPage(); y = 42; }
+  }
+
+  function drawWrapped(text, x, maxW, fontSize, leading, color, fontStyle) {
+    doc.setFont('helvetica', fontStyle||'normal');
+    doc.setFontSize(fontSize);
+    setColor(color||TXTBODY);
+    const lines = doc.splitTextToSize(text, maxW);
+    lines.forEach(line => {
+      checkY(leading + 2);
+      doc.text(line, x, y);
+      y += leading;
+    });
+  }
+
+  function drawCard(x, cardY, w, h, opts) {
+    opts = opts || {};
+    setFill(opts.bg || CREAM);
+    doc.roundedRect(x, cardY, w, h, 4, 4, 'F');
+    if (opts.accent !== false) {
+      setFill(opts.accentColor || RED);
+      doc.rect(x, cardY, 3, h, 'F');
+    }
+  }
+
+
+  // ════════════════════════════════════════════════════
+  // PAGE 1 — EXECUTIVE SUMMARY
+  // ════════════════════════════════════════════════════
+  newPage();
+  pageNum = 1;
+
+  // Logo / title header
+  y = 38;
+  doc.setFont('helvetica','bold'); doc.setFontSize(10); setColor(DARK);
+  doc.text('MAIN LINE TALENT GROUP', ML, y);
+  doc.setFont('helvetica','normal'); doc.setFontSize(18); setColor(DARK);
+  doc.text('Workforce Cost Comparison', W-MR, y, {align:'right'});
+  y += 10;
+  setFill(DARK); doc.rect(ML, y, TW, 4, 'F');
+  setFill(RED); doc.rect(ML, y+4, TW, 2, 'F');
+  y += 16;
+
+  // ── Executive Summary Card ──
+  const cardX = ML, cardW = TW;
+  const cardPad = 24;
+  const contentRatio = 0.87;
+  const contentW = cardW * contentRatio;
+  const contentX = cardX + (cardW - contentW) / 2;
+
+  const contextStr = roleStr + (s.industry ? '  ·  '+s.industry : '') + '  ·  ' + stateDisplay + '  ·  ' + s.months + '-Month Engagement  ·  $' + s.salary.toLocaleString() + ' salary  ·  $' + s.rate + '/hr bill rate  ·  ' + s.hrs + ' hrs/week';
+
+  let leadText, supportText;
+  if (contractorWins && s.xMo > s.months) {
+    leadText = 'Contract engagement projects a ' + savingsPct + '% (' + fmt(savings) + ') cost reduction over ' + s.months + ' months.';
+    supportText = 'The break-even point at month ' + s.xMo + ' exceeds the planned engagement by ' + (s.xMo - s.months) + ' months, reinforcing the contract recommendation. All loaded employer costs are included: payroll taxes, benefits, recruiting fees, ramp-to-productivity loss, and PTO liability.';
+  } else if (!contractorWins) {
+    leadText = 'Direct hire projects a ' + savingsPct + '% (' + fmt(savings) + ') cost advantage over ' + s.months + ' months.';
+    supportText = 'The break-even falls at approximately month ' + s.xMo + '. All loaded employer costs are included: payroll taxes, benefits, recruiting fees, ramp-to-productivity loss, and PTO liability.';
+  } else {
+    leadText = 'Contract model is ' + savingsPct + '% (' + fmt(savings) + ') less expensive, though the outcome is sensitive to scope changes.';
+    supportText = 'The break-even at month ' + s.xMo + ' falls within the engagement window. Small shifts in timeline, rate, or scope could change the recommendation.';
+  }
+
+  const assumptionsText = 'Assumptions:  ' + s.months + '-month engagement  ·  ' + s.hrs + ' hours/week  ·  $' + s.salary.toLocaleString() + ' annual salary  ·  $' + s.rate + '/hr bill rate  ·  ' + stateDisplay + ' payroll tax rates' + (usesNatlAvg ? ' (national average basis)' : '') + '  ·  ' + k401Pct + '% 401(k) match  ·  Employer health insurance at national average  ·  19 PTO days/year prorated  ·  Recruiting fee per engagement terms  ·  Standard ramp-to-productivity model';
+
+  // Measure text heights
+  doc.setFontSize(10);
+  const contextLines = doc.splitTextToSize(contextStr, contentW);
+  doc.setFontSize(12);
+  const leadLines = doc.splitTextToSize(leadText, contentW);
+  doc.setFontSize(11);
+  const supportLines = doc.splitTextToSize(supportText, contentW);
+  doc.setFontSize(8.5);
+  const assumptionLines = doc.splitTextToSize(assumptionsText, contentW);
+
+  const tblRowH = 17;
+  const baseCostRows = 9 + (s.bonusCost > 0 ? 1 : 0) + 2; // items + bonus + total + loaded
+  const costTableH = baseCostRows * tblRowH;
+  const kpiH = 58;
+
+  const cardH = cardPad + 19 + 14
+    + contextLines.length * 13 + 14
+    + leadLines.length * 16 + 6
+    + supportLines.length * 15 + 14
+    + kpiH + 14
+    + costTableH + 14
+    + assumptionLines.length * 11
+    + cardPad;
+
+  const cardStartY = y;
+  drawCard(cardX, cardStartY, cardW, cardH, {bg:CREAM, accentColor:RED});
+
+  // Card label
+  y = cardStartY + cardPad;
+  doc.setFont('helvetica','bold'); doc.setFontSize(15); setColor(DARK);
+  doc.text('Executive Summary', contentX, y + 12);
+  y += 16;
+  doc.setDrawColor(...LGRAY); doc.setLineWidth(0.5);
+  doc.line(contentX, y, contentX + contentW, y);
+  y += 12;
+
+  // Context
+  doc.setFont('helvetica','normal'); doc.setFontSize(10); setColor(MGRAY);
+  contextLines.forEach(line => { doc.text(line, contentX, y); y += 13; });
+  y += 10;
+
+  // Lead insight
+  doc.setFont('helvetica','bold'); doc.setFontSize(12); setColor(DARK);
+  leadLines.forEach(line => { doc.text(line, contentX, y); y += 16; });
+  y += 4;
+
+  // Support text
+  doc.setFont('helvetica','normal'); doc.setFontSize(11); setColor(TXTBODY);
+  supportLines.forEach(line => { doc.text(line, contentX, y); y += 15; });
+  y += 10;
+
+  // ── KPI Cards ──
+  const kpiW = contentW / 3;
+  const kpiInner = kpiW - 8;
+  [{label:'DIRECT HIRE TOTAL', value:fmt(s.dTotal), sub:'$'+s.dEhr.toFixed(2)+'/hr loaded', accent:false},
+   {label:'CONTRACT TOTAL', value:fmt(s.cTotal), sub:'$'+s.cEhr.toFixed(2)+'/hr effective', accent:false},
+   {label:'PROJECTED SAVINGS', value:fmt(savings), sub:savingsPct+'%  ·  Break-even Mo. '+s.xMo, accent:true}
+  ].forEach((kpi, i) => {
+    const kx = contentX + i * kpiW + 4;
+    setFill(WHITE); doc.roundedRect(kx, y, kpiInner, kpiH, 4, 4, 'F');
+    doc.setFont('helvetica','normal'); doc.setFontSize(8); setColor(MGRAY);
+    doc.text(kpi.label, kx + kpiInner/2, y + 14, {align:'center'});
+    doc.setFont('helvetica','bold'); doc.setFontSize(16);
+    setColor(kpi.accent ? GOOD : DARK);
+    doc.text(kpi.value, kx + kpiInner/2, y + 34, {align:'center'});
+    doc.setFont('helvetica','normal'); doc.setFontSize(8); setColor(MGRAY);
+    doc.text(kpi.sub, kx + kpiInner/2, y + 48, {align:'center'});
+  });
+  y += kpiH + 10;
+
+  // ── Cost Comparison Table ──
+  const tblCols = [contentW * 0.377, contentW * 0.207, contentW * 0.207, contentW * 0.209];
+  let tblY = y;
+
+  // Header row
+  setFill(DARK); doc.rect(contentX, tblY, contentW, tblRowH, 'F');
+  tblY += 12;
+  doc.setFont('helvetica','bold'); doc.setFontSize(10); setColor(WHITE);
+  doc.text('Cost Component', contentX + 6, tblY);
+  doc.text('Direct Hire', contentX + tblCols[0] + tblCols[1] - 6, tblY, {align:'right'});
+  doc.text('Contract', contentX + tblCols[0] + tblCols[1] + tblCols[2] - 6, tblY, {align:'right'});
+  doc.text('Variance', contentX + contentW - 6, tblY, {align:'right'});
+  tblY += 5;
+
+  const costRows = [
+    {label:'Base Compensation (Prorated)', dh:fmt(s.salaryPro), ct:fmt(s.cTotal), vr: s.cTotal > s.salaryPro ? '('+Math.round(s.cTotal - s.salaryPro).toLocaleString()+')' : fmt(s.salaryPro - s.cTotal)},
+    {label:'Equivalent Hourly Rate', dh:'$'+dHourly.toFixed(2)+'/hr', ct:'$'+s.rate.toFixed(2)+'/hr', vr:'', italic:true, small:true, color:FAINT},
+    {label:'Employer Payroll Taxes', dh:fmt(s.taxTotal), ct:'Included', vr:fmtVar(s.taxTotal), vrColor:WARN},
+    {label:'Health Insurance', dh:fmt(s.healthAmt), ct:'Included', vr:fmtVar(s.healthAmt), vrColor:WARN},
+    {label:'401(k) Match ('+k401Pct+'%)', dh:fmt(s.k401), ct:'Included', vr:fmtVar(s.k401), vrColor:WARN},
+    {label:'PTO Liability', dh:fmt(s.ptoAmt), ct:'N/A', vr:fmtVar(s.ptoAmt), vrColor:WARN},
+    {label:'IT and Equipment', dh:fmt(s.itAmt), ct:'N/A', vr:fmtVar(s.itAmt), vrColor:WARN},
+    {label:'Recruiting / Placement Fee', dh:fmt(s.recruitAmt), ct:'Included', vr:fmtVar(s.recruitAmt), vrColor:WARN},
+    {label:'Ramp-to-Productivity Cost', dh:fmt(s.rampCost), ct:'Minimal', vr:fmtVar(s.rampCost), vrColor:WARN},
+  ];
+  if (s.bonusCost > 0) {
+    costRows.push({label:'Bonus / Variable Comp', dh:fmt(s.bonusCost), ct:'N/A', vr:fmtVar(s.bonusCost), vrColor:WARN});
+  }
+  const totalVrColor = contractorWins ? GOOD : WARN;
+  const totalVrText = contractorWins ? fmt(savings) : fmtVar(savings);
+  costRows.push({label:'Total Engagement Cost', dh:fmt(s.dTotal), ct:fmt(s.cTotal), vr:totalVrText, vrColor:totalVrColor, bold:true, topLine:true});
+  costRows.push({label:'Effective Loaded Rate', dh:'$'+s.dEhr.toFixed(2)+'/hr', ct:'$'+s.cEhr.toFixed(2)+'/hr', vr:'$'+Math.abs(s.dEhr - s.cEhr).toFixed(2), vrColor:TXTBODY});
+
+  costRows.forEach((row, idx) => {
+    tblY += tblRowH;
+    if (idx % 2 === 0 && !row.bold) { setFill(WHITE); doc.rect(contentX, tblY - 12, contentW, tblRowH, 'F'); }
+    else if (!row.bold) { setFill(TBLALT); doc.rect(contentX, tblY - 12, contentW, tblRowH, 'F'); }
+    if (row.topLine) {
+      setFill(CREAM); doc.rect(contentX, tblY - 12, contentW, tblRowH, 'F');
+      doc.setDrawColor(...DARK); doc.setLineWidth(1.5);
+      doc.line(contentX, tblY - 12, contentX + contentW, tblY - 12);
+    }
+    if (!row.bold) { doc.setDrawColor(...LGRAY); doc.setLineWidth(0.25); doc.line(contentX, tblY + 5, contentX + contentW, tblY + 5); }
+    const fs = row.small ? 9.5 : 10.5;
+    doc.setFont('helvetica', row.bold ? 'bold' : (row.italic ? 'italic' : 'normal'));
+    doc.setFontSize(fs);
+    setColor(row.color || (row.bold ? DARK : TXTBODY));
+    doc.text(row.label, contentX + 6, tblY);
+    doc.text(row.dh, contentX + tblCols[0] + tblCols[1] - 6, tblY, {align:'right'});
+    doc.text(row.ct, contentX + tblCols[0] + tblCols[1] + tblCols[2] - 6, tblY, {align:'right'});
+    setColor(row.vrColor || TXTBODY);
+    doc.text(row.vr, contentX + contentW - 6, tblY, {align:'right'});
+  });
+  tblY += 14;
+  y = tblY;
+
+  // Assumptions
+  doc.setFont('helvetica','normal'); doc.setFontSize(8.5); setColor(MGRAY);
+  const aLines = doc.splitTextToSize(assumptionsText, contentW);
+  aLines.forEach(line => { doc.text(line, contentX + contentW/2, y, {align:'center'}); y += 11; });
+
+
+  // ════════════════════════════════════════════════════
+  // PAGE 2 — DETAILED COST MODEL
+  // ════════════════════════════════════════════════════
+  newPage('Detailed Cost Model');
+
+  doc.setFont('helvetica','bold'); doc.setFontSize(13); setColor(DARK);
+  doc.text('Section A: Direct Hire Cost Breakdown', ML, y); y += 18;
+
+  function drawDetailSection(title) {
+    checkY(20);
+    setFill(DARK); doc.rect(ML, y - 10, TW, 16, 'F');
+    doc.setFont('helvetica','bold'); doc.setFontSize(8); setColor(WHITE);
+    doc.text(title, ML + 6, y);
+    y += 10;
+  }
+  function drawDetailRow(label, value, opts) {
+    opts = opts || {};
+    checkY(15);
+    if (opts.subtotal) {
+      doc.setDrawColor(...LGRAY); doc.setLineWidth(0.5); doc.line(ML, y - 8, ML + TW, y - 8);
+      setFill(CREAM); doc.rect(ML, y - 8, TW, 15, 'F');
+    }
+    if (opts.grand) {
+      doc.setDrawColor(...DARK); doc.setLineWidth(1.5); doc.line(ML, y - 8, ML + TW, y - 8);
+      setFill(CREAM); doc.rect(ML, y - 8, TW, 16, 'F');
+    }
+    const fs = opts.note ? 8 : (opts.grand ? 10 : 9);
+    doc.setFont('helvetica', (opts.subtotal || opts.grand) ? 'bold' : (opts.note ? 'italic' : 'normal'));
+    doc.setFontSize(fs);
+    setColor(opts.note ? FAINT : (opts.grand ? DARK : TXTBODY));
+    doc.text(label, ML + (opts.indent || 10), y);
+    if (value) {
+      doc.setFont('helvetica', (opts.subtotal || opts.grand) ? 'bold' : (opts.note ? 'italic' : 'normal'));
+      setColor(opts.note ? FAINT : (opts.grand ? DARK : TXTBODY));
+      doc.text(value, ML + TW - 6, y, {align:'right'});
+    }
+    y += opts.note ? 12 : (opts.grand ? 16 : 14);
+  }
+
+  const burdenSub = s.taxTotal + s.healthAmt + s.k401 + s.ptoAmt + s.itAmt;
+  const compSub = s.salaryPro + s.bonusCost;
+  const burdenPct = Math.round(burdenSub / s.salaryPro * 100);
+
+  drawDetailSection('COMPENSATION');
+  drawDetailRow('Base Salary (Prorated)', fmt(s.salaryPro));
+  drawDetailRow('Equivalent hourly: $'+dHourly.toFixed(2)+'/hr  ·  Annual: $'+s.salary.toLocaleString(), '', {note:true});
+  if (s.bonusCost > 0) drawDetailRow('Bonus / Variable Compensation', fmt(s.bonusCost));
+  drawDetailRow('Subtotal: Compensation', fmt(compSub), {subtotal:true});
+
+  drawDetailSection('EMPLOYMENT BURDEN');
+  drawDetailRow('Federal Payroll Taxes (FICA)', fmt(Math.round(s.salaryPro * 0.0765)));
+  drawDetailRow('State Unemployment (SUTA)', fmt(Math.round(s.taxTotal - s.salaryPro * 0.0765)));
+  drawDetailRow('Health Insurance (Employer Share)', fmt(s.healthAmt));
+  drawDetailRow('401(k) Employer Match ('+k401Pct+'%)', fmt(s.k401));
+  drawDetailRow('PTO Accrual Liability (19 days/yr prorated)', fmt(s.ptoAmt));
+  drawDetailRow('IT, Equipment, and Onboarding', fmt(s.itAmt));
+  drawDetailRow('Subtotal: Employment Burden ('+burdenPct+'% of base)', fmt(burdenSub), {subtotal:true});
+
+  drawDetailSection('ACQUISITION COSTS');
+  drawDetailRow('Recruiting / Placement Fee', fmt(s.recruitAmt));
+  drawDetailRow('Subtotal: Acquisition', fmt(s.recruitAmt), {subtotal:true});
+
+  drawDetailSection('RAMP PRODUCTIVITY IMPACT');
+  drawDetailRow('Estimated Productivity Loss During Ramp', fmt(s.rampCost));
+  drawDetailRow('Subtotal: Ramp Impact', fmt(s.rampCost), {subtotal:true});
+
+  drawDetailRow('Total Direct Hire Cost', fmt(s.dTotal), {grand:true});
+  drawDetailRow('Effective Loaded Rate: $'+s.dEhr.toFixed(2)+'/hr', '', {note:true});
+  y += 12;
+
+  // Section B
+  checkY(200);
+  doc.setFont('helvetica','bold'); doc.setFontSize(13); setColor(DARK);
+  doc.text('Section B: Contractor Cost Breakdown', ML, y); y += 18;
+
+  const totalWeeks = Math.round(s.months * 4.33);
+  const totalHrs = Math.round(s.cTotal / Math.max(s.effectiveRate || s.rate, 1));
+
+  drawDetailSection('RATE STRUCTURE');
+  drawDetailRow('Bill Rate', '$'+s.rate.toFixed(2)+'/hr');
+  if (s.discountPerHr > 0) drawDetailRow('Volume Discount', '-$'+s.discountPerHr.toFixed(2)+'/hr');
+  if (s.effectiveRate !== s.rate) drawDetailRow('Effective Rate', '$'+(s.effectiveRate||s.rate).toFixed(2)+'/hr');
+  drawDetailRow('Annualized Equivalent (2,080 hrs)', fmt((s.effectiveRate||s.rate) * 2080));
+
+  drawDetailSection('ENGAGEMENT TERMS');
+  drawDetailRow('Engagement Duration', s.months + ' months (' + totalWeeks + ' weeks)');
+  drawDetailRow('Weekly Hours', s.hrs + ' hrs/week');
+  drawDetailRow('Total Billable Hours', totalHrs.toLocaleString() + ' hours');
+
+  drawDetailSection('TOTAL PROJECTED SPEND');
+  drawDetailRow('Bill Rate × Billable Hours', fmt(s.cTotal));
+  drawDetailRow('Employer Payroll Taxes', '$0 — absorbed by staffing partner', {note:true, indent:10});
+  drawDetailRow('Benefits and Insurance', '$0 — absorbed by staffing partner', {note:true, indent:10});
+  drawDetailRow('Recruiting Fee', '$0 — included in bill rate', {note:true, indent:10});
+  drawDetailRow('IT and Equipment', '$0 — not required', {note:true, indent:10});
+
+  drawDetailRow('Total Contract Cost', fmt(s.cTotal), {grand:true});
+  drawDetailRow('Effective Rate: $'+s.cEhr.toFixed(2)+'/hr', '', {note:true});
+
+
+  // ════════════════════════════════════════════════════
+  // NARRATIVE PAGES — AI/Industry Analysis
+  // ════════════════════════════════════════════════════
+  // Parse the v2 narrative sections
+  const sectionDefs = [
+    {key:'COMPENSATION BENCHMARK', color:GOOD},
+    {key:'DIRECT HIRE: PROS AND CONS', color:MGRAY},
+    {key:'CONTRACTOR: PROS AND CONS', color:BLUE},
+    {key:'INDUSTRY CONTEXT: EXTERNAL ENVIRONMENT (PESTLE)', color:[91,74,138]},
+    {key:'POTENTIAL RISKS TO CONSIDER', color:[180,80,20]},
+    {key:'STRATEGIC ASSESSMENT FRAMEWORK', color:DARK},
   ];
 
-  // Map sub-header prefixes to PESTLE letters
+  // PESTLE letter styling
+  const pestleLetters = [
+    {letter:'P', word:'Political', color:[26,58,92]},
+    {letter:'E', word:'Economic', color:[44,94,121]},
+    {letter:'S', word:'Social', color:[91,74,138]},
+    {letter:'T', word:'Technological', color:[45,122,79]},
+    {letter:'L', word:'Legal', color:[180,80,20]},
+    {letter:'E', word:'Environmental', color:[58,122,92]},
+  ];
   const pestleMap = {
-    'Political and Regulatory': 0,
-    'Economic Factors': 1,
-    'Social and Workforce Trends': 2,
-    'Technological Drivers': 3,
-    'Legal Considerations': 4,
-    'Environmental Factors': 5,
+    'Political and Regulatory':0, 'Economic Factors':1, 'Social and Workforce Trends':2,
+    'Technological Drivers':3, 'Legal Considerations':4, 'Environmental Factors':5,
   };
 
-  let sectionHTML = '';
-  sectionDefs.forEach((sec,idx) => {
-    const nextKey = idx < sectionDefs.length-1 ? sectionDefs[idx+1].key : null;
-    const start = narrative.indexOf(sec.key);
+  newPage('Analysis and Recommendations');
+  doc.setFont('helvetica','normal'); doc.setFontSize(9); setColor(MGRAY);
+  doc.text('Industry-specific analysis personalized to your scenario inputs' + (s.industry ? ' — '+s.industry : ''), ML, y); y += 14;
+
+  let remaining = narrative;
+  sectionDefs.forEach((sec, idx) => {
+    const nextKey = idx < sectionDefs.length - 1 ? sectionDefs[idx + 1].key : null;
+    const start = remaining.indexOf(sec.key);
     if (start === -1) return;
-    const end = nextKey ? narrative.indexOf(nextKey) : narrative.length;
-    const body = narrative.slice(start+sec.key.length, end!==-1?end:undefined).trim();
-    const paragraphs = body.split(/\n\n+/).filter(p => p.trim());
+    const end = nextKey ? remaining.indexOf(nextKey) : remaining.length;
+    const body = remaining.slice(start + sec.key.length, end !== -1 ? end : undefined).trim();
+
+    checkY(60);
+    // Section header bar
+    setFill(sec.color); doc.roundedRect(ML, y, TW, 22, 3, 3, 'F');
+    doc.setFont('helvetica','bold'); doc.setFontSize(9); setColor(WHITE);
+    doc.text(sec.key, ML + 12, y + 14);
+    y += 28;
+
+    // Check for PESTLE section — format sub-headers with letter blocks
     const isPestle = sec.key.indexOf('PESTLE') !== -1;
 
-    const parasHTML = paragraphs.map(p => {
-      const t = p.trim();
+    // Split into paragraphs
+    const paragraphs = body.split(/\n\n+/).filter(p => p.trim());
+    paragraphs.forEach(para => {
+      const t = para.trim();
+      if (!t) return;
 
-      // Bullet point items (• prefix)
-      if (t.startsWith('\u2022')) {
-        const bulletText = linkify(t.slice(1).trim());
-        return '<div class="section-block" style="display:flex;gap:8px;margin:6px 0 0 0;align-items:flex-start;">'
-          + '<div style="flex-shrink:0;width:6px;height:6px;background:#EB1C24;border-radius:50%;margin-top:6px;"></div>'
-          + '<p style="font-size:10.5px;color:#333;line-height:1.7;margin:0;">'+bulletText+'</p></div>';
-      }
+      // Check for sub-header pattern: "Label: content"
+      const subMatch = t.match(/^([A-Z][A-Za-z &,\/\-]+(?:\([A-Z]+\))?):\s/);
 
-      // Check for sub-headers like "Political and Regulatory: ..." or "Internal Analysis:"
-      const subMatch = t.match(/^([A-Z][A-Za-z &,\/\-]+(?:\([A-Z]+\))?):[\s\n]/);
-      if (subMatch) {
+      if (isPestle && subMatch) {
         const label = subMatch[1];
-        const rest = linkify(t.slice(subMatch[0].length).trim());
+        const rest = t.slice(subMatch[0].length).trim();
         const pestleIdx = pestleMap[label];
 
-        if (isPestle && pestleIdx !== undefined) {
+        if (pestleIdx !== undefined) {
+          checkY(55);
           const pl = pestleLetters[pestleIdx];
-          return '<div class="pestle-block" style="display:flex;gap:12px;margin:14px 0 0 0;align-items:flex-start;">'
-            + '<div style="flex-shrink:0;width:36px;height:36px;background:'+pl.color+';color:#fff;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;letter-spacing:0;">'+pl.letter+'</div>'
-            + '<div style="flex:1;"><div style="font-size:9px;font-weight:700;color:'+pl.color+';text-transform:uppercase;letter-spacing:0.1em;margin-bottom:2px;">'+pl.word+'</div>'
-            + '<p style="font-size:10.5px;color:#333;line-height:1.7;margin:0;">'+rest+'</p></div></div>';
+          // Letter block
+          setFill(pl.color);
+          doc.roundedRect(ML, y - 2, 24, 24, 3, 3, 'F');
+          doc.setFont('helvetica','bold'); doc.setFontSize(14); setColor(WHITE);
+          doc.text(pl.letter, ML + 12, y + 12, {align:'center'});
+          // Word label
+          doc.setFont('helvetica','bold'); doc.setFontSize(9); setColor(pl.color);
+          doc.text(pl.word.toUpperCase(), ML + 30, y + 4);
+          y += 8;
+          // Body text indented
+          doc.setFont('helvetica','normal'); doc.setFontSize(9.5); setColor(TXTBODY);
+          const pLines = doc.splitTextToSize(rest, TW - 34);
+          pLines.forEach(line => { checkY(13); doc.text(line, ML + 30, y); y += 13; });
+          y += 8;
+          return;
         }
-
-        return '<p style="font-size:10.5px;color:#333;line-height:1.7;margin:12px 0 0 0;"><strong style="color:#231F20;">'+label+':</strong> '+linkify(rest)+'</p>';
       }
-      return '<p style="font-size:10.5px;color:#333;line-height:1.7;margin:8px 0 0 0;">'+linkify(t)+'</p>';
-    }).join('');
 
-    sectionHTML += '<div class="section-banner" style="background:'+sec.color+';color:#fff;padding:6px 14px;border-radius:4px;font-size:10px;font-weight:700;letter-spacing:0.08em;margin-top:18px;">'+sec.key+'</div>'+parasHTML;
+      // Sub-header (non-PESTLE)
+      if (subMatch) {
+        checkY(20);
+        const label = subMatch[1];
+        const rest = t.slice(subMatch[0].length).trim();
+        doc.setFont('helvetica','bold'); doc.setFontSize(10); setColor(DARK);
+        doc.text(label+':', ML, y); y += 14;
+        doc.setFont('helvetica','normal'); doc.setFontSize(9.5); setColor(TXTBODY);
+        const sLines = doc.splitTextToSize(rest, TW);
+        sLines.forEach(line => { checkY(13); doc.text(line, ML, y); y += 13; });
+        y += 6;
+        return;
+      }
+
+      // Bullet items
+      if (t.startsWith('\u2022')) {
+        checkY(16);
+        const bulletText = t.slice(1).trim();
+        doc.setFont('helvetica','normal'); doc.setFontSize(9.5); setColor(TXTBODY);
+        const bLines = doc.splitTextToSize(bulletText, TW - 16);
+        doc.text('\u2022', ML + 2, y);
+        bLines.forEach((line, li) => { checkY(13); doc.text(line, ML + 14, y); y += 13; });
+        y += 3;
+        return;
+      }
+
+      // Regular paragraph
+      doc.setFont('helvetica','normal'); doc.setFontSize(9.5); setColor(TXTBODY);
+      const pLines = doc.splitTextToSize(t, TW);
+      pLines.forEach(line => { checkY(13); doc.text(line, ML, y); y += 13; });
+      y += 6;
+    });
+    y += 8;
   });
 
-  const bonusRow = s.bonusCost > 0
-    ? '<tr style="color:#999;font-size:9.5px;"><td style="padding:3px 0 3px 14px;">Bonuses</td><td style="text-align:right;padding:3px 0;">$'+Math.round(s.bonusCost).toLocaleString()+'</td></tr>'
-    : '';
 
-  const html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>MLTG Cost Analysis: '+roleLabel+'</title>'
-    + '<style>@page{size:letter;margin:0.4in 0.6in 0.5in 0.6in;}@media print{body{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}.no-print{display:none!important;}}.pestle-block,.section-block,p{break-inside:avoid;page-break-inside:avoid;}.section-banner{break-after:avoid;page-break-after:avoid;}*{box-sizing:border-box;margin:0;padding:0;}body{font-family:"Segoe UI",Arial,Helvetica,sans-serif;color:#231F20;font-size:11px;line-height:1.5;background:#fff;}.page{max-width:7.5in;margin:0 auto;padding:0 20px;}.header{background:#231F20;padding:14px 20px;display:flex;justify-content:space-between;align-items:center;}.header-left{color:#fff;font-weight:700;font-size:10px;letter-spacing:0.06em;}.header-right{color:#C4B8AE;font-size:8.5px;}.red-bar{height:3px;background:#EB1C24;}.title-block{background:#f5f3f0;padding:16px 20px;margin-top:16px;border-radius:5px;}.title-block h1{font-size:18px;font-weight:800;margin-bottom:4px;}.title-block .sub{font-size:10px;color:#666;}.params-bar{display:flex;background:#231F20;border-radius:5px;margin-top:12px;overflow:hidden;}.params-bar .param{flex:1;text-align:center;padding:10px 8px;}.params-bar .param-val{color:#fff;font-weight:700;font-size:12px;}.params-bar .param-lbl{color:#b4bec8;font-size:8px;margin-top:3px;}.cards{display:flex;gap:10px;margin-top:14px;}.card{flex:1;border:1px solid #ddd;border-radius:5px;overflow:hidden;}.card-accent{height:3px;}.card-body{padding:14px 16px;}.card h3{font-size:8.5px;text-transform:uppercase;letter-spacing:0.08em;color:#888;margin-bottom:8px;}.card .total{font-size:22px;font-weight:800;margin-bottom:10px;}.card table{width:100%;border-collapse:collapse;}.card td{padding:3px 0;font-size:9.5px;}.card .total-row td{font-weight:700;font-size:10.5px;padding-top:8px;border-top:1px solid #ddd;}.card .green{color:#2d7a4f;}.card .gray{color:#999;}.delta-banner{text-align:center;padding:12px;border-radius:5px;margin-top:14px;color:#fff;}.delta-banner .big{font-size:13px;font-weight:700;}.delta-banner .sm{font-size:9px;opacity:0.85;margin-top:3px;}.section-heading{font-size:15px;font-weight:800;margin-top:24px;margin-bottom:12px;}.cta-box{background:#231F20;border-radius:6px;padding:18px 22px;margin-top:24px;border-left:4px solid #EB1C24;}.cta-box h3{color:#fff;font-size:14px;margin-bottom:6px;}.cta-box p{color:#b4c4d2;font-size:9.5px;line-height:1.6;}.cta-box .email{color:#4C9CC9;font-weight:700;font-size:10px;margin-top:10px;}.footer{text-align:center;font-size:8px;color:#999;margin-top:20px;padding-top:10px;border-top:1px solid #eee;}.print-bar{text-align:center;padding:20px;}.print-bar button{font-family:inherit;padding:12px 32px;font-size:14px;font-weight:700;background:#231F20;color:#fff;border:none;border-radius:6px;cursor:pointer;}.print-bar button:hover{opacity:0.9;}@media(max-width:600px){.page{padding:0 16px;}.header{padding:12px 16px;flex-direction:column;gap:6px;align-items:flex-start;}.title-block{padding:14px 16px;}.title-block h1{font-size:15px;}.params-bar{flex-wrap:wrap;}.params-bar .param{min-width:33%;padding:8px 6px;}.params-bar .param-val{font-size:11px;}.cards{flex-direction:column;}.card-body{padding:12px 14px;}.card .total{font-size:18px;}.delta-banner .big{font-size:11px;}.section-heading{font-size:13px;}.cta-box{padding:14px 16px;}.pestle-block{padding:0 4px;}}</style></head><body>'
-    + '<div class="no-print print-bar"><button onclick="window.print()">\uD83D\uDCBE Save as PDF</button><p style="font-size:12px;color:#888;margin-top:8px;">In the print dialog, select <strong>"Save as PDF"</strong> as your destination (instead of a printer).</p></div>'
-    + '<div class="page"><div class="header"><div class="header-left">MAIN LINE TALENT GROUP</div><div class="header-right">mainlinetalent.com</div></div><div class="red-bar"></div>'
-    + '<div class="title-block"><h1>Workforce Cost Analysis</h1><div class="sub">Role: '+roleLabel+industryLabel+'</div><div class="sub">Prepared by Main Line Talent Group  ·  '+dateStr+'</div></div>'
-    + '<div class="params-bar"><div class="param"><div class="param-val">$'+s.salary.toLocaleString()+'</div><div class="param-lbl">Salary</div></div><div class="param"><div class="param-val">$'+s.rate+'/hr</div><div class="param-lbl">Bill Rate</div></div><div class="param"><div class="param-val">'+s.months+' months</div><div class="param-lbl">Engagement</div></div><div class="param"><div class="param-val">'+stateClean+'</div><div class="param-lbl">State</div></div><div class="param"><div class="param-val">'+billingLabel+'</div><div class="param-lbl">Billing</div></div></div>'
-    + '<div class="cards"><div class="card"><div class="card-accent" style="background:#999;"></div><div class="card-body"><h3>Direct W-2 Hire</h3><div class="total">$'+Math.round(s.dTotal).toLocaleString()+'</div><table>'
-    + '<tr><td>Base Salary (Prorated)</td><td style="text-align:right;">$'+Math.round(s.salaryPro).toLocaleString()+'</td></tr>'
-    + '<tr style="color:#999;font-size:9.5px;"><td style="padding-left:14px;">Employer Payroll Taxes</td><td style="text-align:right;">$'+Math.round(s.taxTotal).toLocaleString()+'</td></tr>'
-    + '<tr style="color:#999;font-size:9.5px;"><td style="padding-left:14px;">Health Insurance</td><td style="text-align:right;">$'+Math.round(s.healthAmt).toLocaleString()+'</td></tr>'
-    + '<tr style="color:#999;font-size:9.5px;"><td style="padding-left:14px;">401(k) Match ('+(s.k401Pct!=null?Math.round(s.k401Pct):3)+'%)</td><td style="text-align:right;">$'+Math.round(s.k401).toLocaleString()+'</td></tr>'
-    + '<tr style="color:#999;font-size:9.5px;"><td style="padding-left:14px;">PTO Cost (~19 Days)</td><td style="text-align:right;">$'+Math.round(s.ptoAmt).toLocaleString()+'</td></tr>'
-    + '<tr style="color:#999;font-size:9.5px;"><td style="padding-left:14px;">IT &amp; Equipment</td><td style="text-align:right;">$'+Math.round(s.itAmt).toLocaleString()+'</td></tr>'
-    + '<tr style="color:#999;font-size:9.5px;"><td style="padding-left:14px;">Recruiting / Placement</td><td style="text-align:right;">$'+Math.round(s.recruitAmt).toLocaleString()+'</td></tr>'
-    + '<tr style="color:#999;font-size:9.5px;"><td style="padding-left:14px;">Ramp Cost</td><td style="text-align:right;">$'+Math.round(s.rampCost).toLocaleString()+'</td></tr>'
-    + bonusRow
-    + '<tr class="total-row"><td>TOTAL TRUE COST</td><td style="text-align:right;">$'+Math.round(s.dTotal).toLocaleString()+'</td></tr>'
-    + '<tr class="gray"><td>Effective Hourly Rate</td><td style="text-align:right;">'+fmtHr(s.dEhr)+'</td></tr>'
-    + '</table></div></div>'
-    + '<div class="card"><div class="card-accent" style="background:#2C5E79;"></div><div class="card-body"><h3>'+(s.cHeading||'Contractor via MLTG')+'</h3><div class="total">$'+Math.round(s.cTotal).toLocaleString()+'</div><table>'
-    + '<tr><td>Bill Rate × Hours Billed</td><td style="text-align:right;">$'+Math.round(s.cTotal).toLocaleString()+'</td></tr>'
-    + '<tr class="green" style="font-size:9.5px;"><td style="padding-left:14px;">Payroll Taxes</td><td style="text-align:right;">$0 (not your cost)</td></tr>'
-    + '<tr class="green" style="font-size:9.5px;"><td style="padding-left:14px;">Benefits &amp; Insurance</td><td style="text-align:right;">$0 (not your cost)</td></tr>'
-    + '<tr class="green" style="font-size:9.5px;"><td style="padding-left:14px;">IT &amp; Equipment</td><td style="text-align:right;">$0 (not your cost)</td></tr>'
-    + '<tr class="green" style="font-size:9.5px;"><td style="padding-left:14px;">Recruiting Fee</td><td style="text-align:right;">$0 (included)</td></tr>'
-    + '<tr class="green" style="font-size:9.5px;"><td style="padding-left:14px;">Ramp Time</td><td style="text-align:right;">Minimal</td></tr>'
-    + '<tr><td>&nbsp;</td><td></td></tr><tr><td>&nbsp;</td><td></td></tr>'
-    + '<tr class="total-row"><td>TOTAL ENGAGEMENT COST</td><td style="text-align:right;">$'+Math.round(s.cTotal).toLocaleString()+'</td></tr>'
-    + '<tr class="gray"><td>Effective Hourly Rate</td><td style="text-align:right;">'+fmtHr(s.cEhr)+'</td></tr>'
-    + '</table></div></div></div>'
-    + '<div class="delta-banner" style="background:'+(contractorWins?'#2C5E79':'#2d7a4f')+';"><div class="big">'+deltaMsg+'</div><div class="sm">Break-even: approximately month '+s.xMo+'  ·  Annualized Direct Hire: $'+Math.round(s.dAnnual).toLocaleString()+'</div></div>'
-    + '<div style="page-break-before:always;"></div><div class="header" style="margin-top:0;"><div class="header-left">MAIN LINE TALENT GROUP</div><div class="header-right">Workforce Planning Calculator · '+dateStr+'</div></div><div class="red-bar"></div>'
-    + '<div class="section-heading">Analysis &amp; Recommendations</div>'
-    + sectionHTML
-    + '<div class="cta-box" style="background:#231F20;border-radius:6px;padding:22px 26px;margin-top:28px;border-left:4px solid #EB1C24;">'
-    + '<h3 style="color:#fff;font-size:15px;margin-bottom:10px;font-weight:800;">Let’s Build Your Workforce Strategy Together</h3>'
-    + '<p style="color:#b4c4d2;font-size:10px;line-height:1.7;margin-bottom:6px;">This report highlights areas that deserve deeper investigation: compensation benchmarking, talent market analysis, pay equity, succession planning, and regulatory compliance. These are exactly the challenges Main Line Talent Group helps employers solve every day.</p>'
-    + '<p style="color:#b4c4d2;font-size:10px;line-height:1.7;margin-bottom:6px;">We’re not just a staffing firm. We’re a workforce planning and talent management partner. We’d love to learn more about your business, your team, and your goals, so we can bring you the market intelligence, candidate insights, and strategic guidance that turns this analysis into action.</p>'
-    + '<p style="color:#e0d6cc;font-size:10.5px;font-weight:700;margin-bottom:14px;">Whether you’re ready to hire or still exploring options, a 15-minute conversation can make the difference.</p>'
-    + '<div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">'
-    + '<a href="https://www.mainlinetalent.com/scheduling" target="_blank" style="display:inline-block;background:#EB1C24;color:#fff;padding:11px 28px;border-radius:5px;font-size:11px;font-weight:700;text-decoration:none;letter-spacing:0.03em;">Schedule a Consultation →</a>'
-    + '<a href="mailto:support@mainlinetalent.com" style="display:inline-block;background:transparent;color:#4C9CC9;padding:11px 20px;border-radius:5px;font-size:11px;font-weight:700;text-decoration:none;border:1px solid #4C9CC9;">support@mainlinetalent.com</a>'
-    + '</div>'
-    + '<div style="margin-top:12px;color:#666;font-size:8.5px;">mainlinetalent.com  ·  Workforce Planning  ·  Talent Management  ·  Compensation Benchmarking</div>'
-    + '</div>'
-    + '<div class="footer">Main Line Talent Group  ·  Workforce Planning Calculator  ·  For Discussion Purposes Only</div>'
-    + '</div></body></html>';
+  // ════════════════════════════════════════════════════
+  // METHODOLOGY & ASSUMPTIONS PAGE
+  // ════════════════════════════════════════════════════
+  newPage('Methodology and Assumptions');
 
-  if (w && w.isEmbedded) {
-    // Render into the current page (report viewer mode)
-    document.head.insertAdjacentHTML('beforeend', '<style>' + html.match(/<style>([\s\S]*?)<\/style>/)[1] + '</style>');
-    const bodyMatch = html.match(/<body>([\s\S]*?)<\/body>/);
-    if (bodyMatch) document.body.innerHTML = bodyMatch[1];
-    document.title = 'Cost Analysis: ' + (s.role || 'Workforce') + ' | MLTG';
-  } else if (w) {
-    w.document.open(); w.document.write(html); w.document.close();
-  } else {
-    const blob = new Blob([html], {type:'text/html'});
-    const url = URL.createObjectURL(blob);
-    window.open(url, '_blank');
+  function drawH3(text) {
+    checkY(24);
+    doc.setFont('helvetica','bold'); doc.setFontSize(11); setColor(DARK);
+    doc.text(text, ML, y); y += 16;
   }
+  function drawBullet(text) {
+    checkY(16);
+    doc.setFont('helvetica','normal'); doc.setFontSize(9.5); setColor(TXTBODY);
+    const lines = doc.splitTextToSize(text, TW - 16);
+    doc.text('\u2022', ML, y);
+    lines.forEach(line => { doc.text(line, ML + 12, y); y += 13; });
+    y += 2;
+  }
+
+  drawH3('Ramp Modeling Approach');
+  drawBullet('Productivity loss estimated using a tiered ramp model based on role complexity and salary band');
+  drawBullet('Ramp cost calculated against prorated salary: '+fmt(s.rampCost)+' for this engagement ('+s.rampLabel+')');
+  drawBullet('Contractor ramp assumed minimal due to pre-screened specialization and prior deployment experience');
+  drawBullet('Model does not account for organization-specific onboarding complexity or role-specific learning curves');
+
+  drawH3('Recruiting Fee Assumptions');
+  drawBullet('Direct-hire placement fee modeled per engagement terms: '+fmt(s.recruitAmt));
+  drawBullet('Includes sourcing, screening, interview coordination, background verification, and offer management');
+  drawBullet('Contractor recruiting cost absorbed by staffing partner and embedded in the bill rate');
+  drawBullet('Model does not include internal HR time, job board spend, or employer branding costs');
+
+  drawH3('Benefits and Payroll Burden Modeling');
+  drawBullet('Federal payroll taxes: FICA at 7.65% (Social Security 6.2% + Medicare 1.45%)');
+  drawBullet('State unemployment (SUTA): rate applied to taxable wage base per '+stateDisplay+' schedule');
+  drawBullet('Federal unemployment (FUTA): 0.6% on first $7,000 of wages');
+  drawBullet('Health insurance: national average employer contribution');
+  drawBullet(k401Pct+'% 401(k) employer match on gross compensation');
+  drawBullet('PTO liability: 19 days/year (national average), prorated to engagement length');
+  drawBullet('IT and equipment: one-time provisioning cost, amortized');
+  drawBullet('All benefit costs for contractor absorbed by staffing partner');
+
+  drawH3('Time Horizon Limitations');
+  drawBullet('Analysis models a fixed '+s.months+'-month engagement; actual costs will vary with timeline changes');
+  drawBullet('Break-even at month '+s.xMo+' assumes linear cost accumulation with no rate escalation');
+  drawBullet('Does not model contract renewal premiums, conversion fees, or severance exposure');
+  drawBullet('Inflation, merit increases, and benefit cost escalation beyond the engagement period are excluded');
+  drawBullet('Organizations should re-evaluate the cost model if engagement extends more than 3 months beyond plan');
+
+  y += 10;
+  checkY(100);
+  doc.setDrawColor(...LGRAY); doc.setLineWidth(0.5);
+  doc.line(ML, y, ML + TW, y); y += 12;
+  doc.setFont('helvetica','bold'); doc.setFontSize(9); setColor(DARK);
+  doc.text('Disclaimer', ML, y); y += 14;
+  doc.setFont('helvetica','normal'); doc.setFontSize(8); setColor(MGRAY);
+  const disclaimerText = 'This analysis is provided for informational and planning purposes only and does not constitute financial, legal, or tax advice. Cost projections are based on estimated market data and standard modeling assumptions that may not reflect actual employer costs. Main Line Talent Group makes no representations or warranties, express or implied, regarding the accuracy, completeness, or reliability of this analysis. Actual costs may vary based on negotiated terms, benefits elections, regulatory changes, and other organization-specific factors. Recipients should consult qualified professionals before making workforce decisions based on this report.';
+  const dLines = doc.splitTextToSize(disclaimerText, TW);
+  dLines.forEach(line => { doc.text(line, ML, y); y += 11; });
+  y += 4;
+  const copyrightText = 'This document is proprietary to Main Line Talent Group and may not be reproduced, distributed, or disclosed to third parties without prior written consent. \u00a9 '+new Date().getFullYear()+' Main Line Talent Group. All rights reserved.';
+  const cLines = doc.splitTextToSize(copyrightText, TW);
+  cLines.forEach(line => { doc.text(line, ML, y); y += 11; });
+
+  // CTA
+  checkY(110);
+  y += 10;
+  setFill(DARK); doc.roundedRect(ML, y, TW, 90, 6, 6, 'F');
+  setFill(RED); doc.rect(ML, y, TW, 3, 'F'); doc.rect(ML, y, 4, 90, 'F');
+  doc.setFont('helvetica','bold'); doc.setFontSize(13); setColor(WHITE);
+  doc.text("Let's Build Your Workforce Strategy Together", ML + 20, y + 22);
+  doc.setFont('helvetica','normal'); doc.setFontSize(8.5); setColor([180,196,210]);
+  const ctaLines = doc.splitTextToSize('Main Line Talent Group specializes in placing top-tier contractors and permanent hires across technology, finance, and professional services. We bring market intelligence, candidate insights, and strategic guidance to every engagement.', TW - 40);
+  let ctaY = y + 36;
+  ctaLines.forEach(l => { doc.text(l, ML + 20, ctaY); ctaY += 12; });
+  doc.setFont('helvetica','bold'); doc.setFontSize(9); setColor([76,156,201]);
+  doc.text('support@mainlinetalent.com  ·  mainlinetalent.com/scheduling', ML + 20, y + 74);
+
+  // ── Footers on all pages ──
+  const pageCount = doc.getNumberOfPages();
+  for (let p = 1; p <= pageCount; p++) {
+    doc.setPage(p);
+    drawFooter(p);
+  }
+
+  // ── Save ──
+  const roleSlug = (s.role !== 'Not specified' ? s.role : 'workforce').replace(/[^a-z0-9]/gi, '_').slice(0, 30);
+  doc.save('MLTG_' + roleSlug + '_CostAnalysis.pdf');
 }
 
 
